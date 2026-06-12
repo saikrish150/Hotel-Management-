@@ -1,0 +1,81 @@
+<div class="min-h-screen flex items-center justify-center bg-[var(--theme-bg,#0a0a0a)] px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+  <!-- Drifting glass blobs for active depth -->
+  <div class="glass-blob w-[600px] h-[600px] top-[-20%] left-[-10%] pointer-events-none" style="--blob-color: var(--theme-glow);"></div>
+  <div class="glass-blob w-[500px] h-[500px] bottom-[-20%] right-[-10%] pointer-events-none" style="--blob-color: var(--theme-glow-hover); animation-delay: -7s;"></div>
+
+  <!-- Floating Theme Switcher -->
+  <div class="absolute top-6 right-6 z-50">
+    <a nz-dropdown [nzDropdownMenu]="themeMenu" nzPlacement="bottomRight" class="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10 text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] hover:border-[var(--theme-primary)] transition-all cursor-pointer shadow-lg backdrop-blur-md">
+      <span nz-icon nzType="bg-colors" class="text-base"></span>
+    </a>
+    <nz-dropdown-menu #themeMenu="nzDropdownMenu">
+      <ul nz-menu class="bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-xl shadow-2xl overflow-hidden min-w-[170px] p-1">
+        <li nz-menu-item (click)="setTheme('theme-gold-black-red')" class="rounded-lg text-xs tracking-wider text-[var(--theme-text-main)] py-2 hover:bg-[var(--theme-border)] flex items-center gap-2">
+          <div class="w-3.5 h-3.5 rounded-full border border-white/10 shadow-sm" style="background: linear-gradient(135deg, #050505 0%, #d4af37 50%, #dc2626 100%)"></div>
+          <span>Gold Black Red</span>
+        </li>
+        <li nz-menu-item (click)="setTheme('theme-cream-white')" class="rounded-lg text-xs tracking-wider text-[var(--theme-text-main)] py-2 hover:bg-[var(--theme-border)] flex items-center gap-2">
+          <div class="w-3.5 h-3.5 rounded-full border border-black/10 shadow-sm" style="background: linear-gradient(135deg, #fcfbf7 0%, #f7f4ea 50%, #1c1917 100%)"></div>
+          <span>Cream White</span>
+        </li>
+      </ul>
+    </nz-dropdown-menu>
+  </div>
+
+  <div class="glass-panel max-w-md w-full space-y-8 p-12 relative overflow-hidden animate-float">
+    <!-- Sophisticated corner gradients -->
+    <div class="absolute top-0 right-0 w-36 h-36 bg-[var(--theme-glow)] rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none"></div>
+    <div class="absolute bottom-0 left-0 w-36 h-36 bg-[var(--theme-glow)] rounded-full blur-3xl -ml-12 -mb-12 pointer-events-none"></div>
+    
+    <div class="text-center relative z-10">
+      <h1 class="luxury-title text-3xl tracking-[0.25em] mb-2" style="background: var(--theme-title-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">LuxeIntel</h1>
+      <p class="text-[9px] uppercase tracking-[0.35em] text-[var(--theme-text-muted)] font-bold">
+        Asset & Business Intelligence
+      </p>
+      <div class="w-16 h-[1px] bg-gradient-to-r from-transparent via-[var(--theme-primary)]/30 to-transparent mx-auto mt-6"></div>
+    </div>
+
+    <form class="mt-8 space-y-6 relative z-10" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      
+      <nz-form-item class="mb-5">
+        <nz-form-control nzErrorTip="Please input a valid admin email!">
+          <div class="relative flex items-center h-14 bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-sm focus-within:border-[var(--theme-primary)]/70 focus-within:shadow-[0_0_20px_var(--theme-glow)] transition-all duration-500 group">
+            <div class="flex items-center justify-center w-14 h-full border-r border-white/5 bg-white/5 group-focus-within:bg-[var(--theme-primary)]/10 transition-colors">
+              <span nz-icon nzType="user" class="text-lg text-[var(--theme-primary)] group-focus-within:scale-110 transition-transform"></span>
+            </div>
+            <input type="email" formControlName="email" placeholder="ADMIN EMAIL" class="flex-1 h-full bg-transparent text-[var(--theme-text-main)] placeholder-gray-500/50 px-5 text-xs tracking-[0.15em] border-none outline-none ring-0 focus:ring-0 focus:outline-none" style="font-family: 'Inter', sans-serif;" />
+          </div>
+        </nz-form-control>
+      </nz-form-item>
+
+      <nz-form-item class="mb-8">
+        <nz-form-control nzErrorTip="Please input your secure password!">
+          <div class="relative flex items-center h-14 bg-black/40 border border-white/10 rounded-xl overflow-hidden backdrop-blur-sm focus-within:border-[var(--theme-primary)]/70 focus-within:shadow-[0_0_20px_var(--theme-glow)] transition-all duration-500 group">
+            <div class="flex items-center justify-center w-14 h-full border-r border-white/5 bg-white/5 group-focus-within:bg-[var(--theme-primary)]/10 transition-colors">
+              <span nz-icon nzType="lock" class="text-lg text-[var(--theme-primary)] group-focus-within:scale-110 transition-transform"></span>
+            </div>
+            <input type="password" formControlName="password" placeholder="SECURE PASSWORD" class="flex-1 h-full bg-transparent text-[var(--theme-text-main)] placeholder-gray-500/50 px-5 text-xs tracking-[0.15em] border-none outline-none ring-0 focus:ring-0 focus:outline-none" style="font-family: 'Inter', sans-serif;" />
+          </div>
+        </nz-form-control>
+      </nz-form-item>
+
+      <div class="pt-4">
+        <button type="submit" [disabled]="loading" class="relative w-full h-14 flex justify-center items-center overflow-hidden rounded-xl group border border-[var(--theme-primary)]/30 bg-black/60 hover:bg-[var(--theme-primary)]/10 hover:border-[var(--theme-primary)] transition-all duration-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+          <div class="absolute inset-0 bg-gradient-to-r from-transparent via-[var(--theme-primary)]/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+          <span class="relative z-10 text-xs tracking-[0.3em] font-bold text-[var(--theme-text-main)] transition-colors duration-300 flex items-center" style="font-family: 'Orbitron', sans-serif;">
+            <ng-container *ngIf="loading; else btnText">
+               <span nz-icon nzType="loading" class="mr-2"></span> AUTHENTICATING...
+            </ng-container>
+            <ng-template #btnText>ACCESS PORTAL</ng-template>
+          </span>
+          <div class="absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-transparent via-[var(--theme-primary)] to-transparent opacity-50 group-hover:opacity-100 transition-opacity"></div>
+        </button>
+      </div>
+      
+    </form>
+    
+    <div class="mt-8 text-center text-[10px] uppercase tracking-[0.2em] text-gray-500/60 relative z-10">
+      Executive Portal &copy; 2026
+    </div>
+  </div>
+</div>

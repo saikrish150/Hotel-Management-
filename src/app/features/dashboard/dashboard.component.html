@@ -1,0 +1,220 @@
+<div class="space-y-6 pb-10">
+  
+  <!-- Dashboard Header -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
+    <div>
+      <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Executive Overview</h2>
+      <p class="text-sm text-[var(--theme-text-muted)] mt-2">Real-time performance metrics for Q3 2023.</p>
+    </div>
+    <div class="flex gap-3">
+      <button nz-button class="bg-transparent border border-[var(--theme-primary)]/50 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 hover:text-[var(--theme-primary)] px-6 h-10 flex items-center gap-2 rounded-md font-semibold text-xs tracking-wider transition-all">
+        <span nz-icon nzType="download"></span> Export
+      </button>
+      <button nz-button class="bg-[var(--theme-primary)] border-none text-black hover:bg-[var(--theme-primary-dark)] px-6 h-10 flex items-center rounded-md font-semibold text-xs tracking-wider transition-all">
+        Generate Report
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Cards (6 columns) -->
+  <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+    
+    <!-- 1: Today's Revenue -->
+    <div class="glass-card flex flex-col justify-between min-h-[140px]">
+      <div class="flex justify-between items-start z-10">
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">TODAY'S REVENUE</p>
+        <span class="text-[var(--theme-primary)] text-lg leading-none">↗</span>
+      </div>
+      <div class="z-10 mt-auto">
+        <h3 class="text-3xl text-[var(--theme-primary)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().todayRevenue) }}</h3>
+        <p class="text-[10px] font-medium"><span class="text-emerald-500">+12.5%</span> <span class="text-[var(--theme-text-muted)]/60 ml-1">vs yesterday</span></p>
+      </div>
+      <!-- Faint background glow for sparkline effect -->
+      <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-[var(--theme-primary)]/5 blur-2xl rounded-full"></div>
+    </div>
+
+    <!-- 2: Monthly Rev -->
+    <div class="glass-card flex flex-col justify-between min-h-[140px]">
+      <div class="flex justify-between items-start">
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">MONTHLY REV.</p>
+        <span nz-icon nzType="wallet" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+      </div>
+      <div class="mt-auto">
+        <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-2">{{ formatKpi(dashboardService.kpis().monthlyRevenue) }}</h3>
+        <div class="w-12 h-[3px] bg-[var(--theme-primary)] rounded-full"></div>
+      </div>
+    </div>
+
+    <!-- 3: Expenses -->
+    <div class="glass-card flex flex-col justify-between min-h-[140px]">
+      <div class="flex justify-between items-start">
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">EXPENSES</p>
+        <span nz-icon nzType="container" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+      </div>
+      <div class="mt-auto">
+        <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().totalExpenses) }}</h3>
+        <p class="text-[10px] font-medium"><span class="text-emerald-500">+2.1%</span> <span class="text-[var(--theme-text-muted)]/60 ml-1">vs last month</span></p>
+      </div>
+    </div>
+
+    <!-- 4: Net Profit -->
+    <div class="glass-card flex flex-col justify-between min-h-[140px]">
+      <div class="flex items-center gap-1.5">
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">NET PROFIT</p>
+        <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+      </div>
+      <div class="mt-auto">
+        <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().netProfit) }}</h3>
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Margin: 62.5%</p>
+      </div>
+    </div>
+
+    <!-- 5: Occupancy -->
+    <div class="glass-card min-h-[140px]">
+      <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider absolute top-5 left-5 z-10">OCCUPANCY</p>
+      <div class="absolute inset-0 flex items-center justify-center pt-4">
+        <apx-chart *ngIf="occupancyChartOptions"
+          [series]="occupancyChartOptions.series!"
+          [chart]="occupancyChartOptions.chart!"
+          [plotOptions]="occupancyChartOptions.plotOptions!"
+          [colors]="occupancyChartOptions.colors!"
+          [stroke]="occupancyChartOptions.stroke!"
+        ></apx-chart>
+      </div>
+    </div>
+
+    <!-- 6: Active Guests -->
+    <div class="glass-card flex flex-col justify-between min-h-[140px]">
+      <div class="flex justify-between items-start">
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">ACTIVE GUESTS</p>
+        <span nz-icon nzType="team" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+      </div>
+      <div class="mt-auto">
+        <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ dashboardService.kpis().totalGuests }}</h3>
+        <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Current Stay</p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Charts Row -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    
+    <!-- Revenue Trends -->
+    <div class="lg:col-span-2 glass-card relative">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Revenue Trends</h3>
+          <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">30-Day Trailing Performance</p>
+        </div>
+        <div class="flex bg-[var(--theme-surface)] rounded-md p-1 border border-[var(--theme-border)]">
+          <button class="px-3 py-1 text-[10px] font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded transition-colors">7D</button>
+          <button class="px-3 py-1 text-[10px] font-bold text-[var(--theme-primary)] bg-[var(--theme-border)] rounded shadow-sm">30D</button>
+          <button class="px-3 py-1 text-[10px] font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded transition-colors">YTD</button>
+        </div>
+      </div>
+      
+      <div class="-ml-4 -mr-2">
+        <apx-chart *ngIf="chartOptions"
+          [series]="chartOptions.series!"
+          [chart]="chartOptions.chart!"
+          [xaxis]="chartOptions.xaxis!"
+          [yaxis]="chartOptions.yaxis!"
+          [stroke]="chartOptions.stroke!"
+          [tooltip]="chartOptions.tooltip!"
+          [dataLabels]="chartOptions.dataLabels!"
+          [fill]="chartOptions.fill!"
+          [colors]="chartOptions.colors!"
+          [grid]="chartOptions.grid!"
+        ></apx-chart>
+      </div>
+    </div>
+
+    <!-- P&L Comparison -->
+    <div class="glass-card relative">
+      <div class="flex justify-between items-start mb-6">
+        <h3 class="text-lg text-[var(--theme-text-main)] font-medium">P&L Comparison</h3>
+        <span nz-icon nzType="more" nzTheme="outline" class="text-[var(--theme-text-muted)] cursor-pointer"></span>
+      </div>
+      
+      <!-- Custom Legend to match screenshot -->
+      <div class="flex gap-4 mb-4">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-sm bg-[var(--theme-primary)]"></div>
+          <span class="text-[11px] text-[var(--theme-text-muted)] font-medium">Profit</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-sm bg-[var(--theme-text-muted)]"></div>
+          <span class="text-[11px] text-[var(--theme-text-muted)] font-medium">Expense</span>
+        </div>
+      </div>
+
+      <div class="-ml-4 -mr-2 -mt-4">
+        <apx-chart *ngIf="profitChartOptions"
+          [series]="profitChartOptions.series!"
+          [chart]="profitChartOptions.chart!"
+          [xaxis]="profitChartOptions.xaxis!"
+          [yaxis]="profitChartOptions.yaxis!"
+          [dataLabels]="profitChartOptions.dataLabels!"
+          [colors]="profitChartOptions.colors!"
+          [plotOptions]="profitChartOptions.plotOptions!"
+          [grid]="profitChartOptions.grid!"
+          [legend]="profitChartOptions.legend!"
+          [tooltip]="profitChartOptions.tooltip!"
+        ></apx-chart>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Table: Inventory Performance -->
+  <div class="glass-card">
+    <div class="flex justify-between items-start mb-6">
+      <div>
+        <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Inventory Performance</h3>
+        <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">AC vs Non-AC Unit Yield Analysis</p>
+      </div>
+      <div>
+        <nz-select [ngModel]="'all'" class="w-36 custom-dark-select">
+          <nz-option nzValue="all" nzLabel="All Properties"></nz-option>
+          <nz-option nzValue="rk" nzLabel="RK Residency"></nz-option>
+        </nz-select>
+      </div>
+    </div>
+
+    <!-- The actual table data would normally be bound to an array, but for this visual matching we will hardcode the two rows as shown in typical designs of this type based on the KPIs. -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-[var(--theme-border)]">
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">CATEGORY</th>
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">TOTAL UNITS</th>
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">OCCUPIED</th>
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">ADR</th>
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">REVPAR</th>
+            <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">TREND</th>
+          </tr>
+        </thead>
+        <tbody class="text-sm">
+          <tr class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 transition-colors">
+            <td class="py-4 font-medium text-[var(--theme-text-main)]">Standard AC</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">12</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">{{ dashboardService.kpis().acRoomsSold }}</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">₹1,200</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">₹950</td>
+            <td class="py-4"><span class="text-emerald-500 text-xs">↑ 4.2%</span></td>
+          </tr>
+          <tr class="hover:bg-[var(--theme-border)]/20 transition-colors">
+            <td class="py-4 font-medium text-[var(--theme-text-main)]">Standard Non-AC</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">8</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">{{ dashboardService.kpis().nonAcRoomsSold }}</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">₹800</td>
+            <td class="py-4 text-[var(--theme-text-muted)]">₹640</td>
+            <td class="py-4"><span class="text-emerald-500 text-xs">↑ 1.1%</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

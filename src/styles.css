@@ -1,0 +1,1103 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Orbitron:wght@400;500;600;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ROYAL GOLD BLACK RED THEME (DEFAULT) */
+    --theme-bg: #050505;
+    --theme-header-bg: rgba(5, 5, 5, 0.45);
+    --theme-card: #0d0d0d;
+    --theme-surface: #141414;
+    --theme-panel: rgba(13, 13, 13, 0.55);
+    
+    --theme-primary: #d4af37; /* Royal Gold */
+    --theme-accent: #dc2626; /* Crimson Red */
+    --theme-primary-dark: #b59023;
+    --theme-glow: rgba(212, 175, 55, 0.12);
+    --theme-glow-hover: rgba(220, 38, 38, 0.22);
+    --theme-shadow: rgba(0, 0, 0, 0.9);
+    --theme-shadow-heavy: rgba(0, 0, 0, 0.95);
+    
+    --theme-text-main: #ffffff;
+    --theme-text-muted: #8e8e93;
+    --theme-border: rgba(212, 175, 55, 0.15); /* Gold outline border */
+    
+    --theme-grid-line: rgba(212, 175, 55, 0.003);
+    --theme-bg-gradient-top: rgba(212, 175, 55, 0.08);
+    --theme-bg-gradient-bottom: rgba(220, 38, 38, 0.05);
+    --theme-title-gradient: linear-gradient(135deg, #ffffff 10%, #d4af37 60%, #dc2626 100%);
+  }
+
+  .theme-gold-black-red {
+    --theme-bg: #050505;
+    --theme-header-bg: rgba(5, 5, 5, 0.45);
+    --theme-card: #0d0d0d;
+    --theme-surface: #141414;
+    --theme-panel: rgba(13, 13, 13, 0.55);
+    
+    --theme-primary: #d4af37;
+    --theme-accent: #dc2626;
+    --theme-primary-dark: #b59023;
+    --theme-glow: rgba(212, 175, 55, 0.12);
+    --theme-glow-hover: rgba(220, 38, 38, 0.22);
+    --theme-shadow: rgba(0, 0, 0, 0.9);
+    --theme-shadow-heavy: rgba(0, 0, 0, 0.95);
+    
+    --theme-text-main: #ffffff;
+    --theme-text-muted: #8e8e93;
+    --theme-border: rgba(212, 175, 55, 0.15);
+    
+    --theme-grid-line: rgba(212, 175, 55, 0.003);
+    --theme-bg-gradient-top: rgba(212, 175, 55, 0.08);
+    --theme-bg-gradient-bottom: rgba(220, 38, 38, 0.05);
+    --theme-title-gradient: linear-gradient(135deg, #ffffff 10%, #d4af37 60%, #dc2626 100%);
+  }
+
+  .theme-cream-white {
+    --theme-bg: #f4f1ea; /* Warmer, less bright cream */
+    --theme-header-bg: rgba(244, 241, 234, 0.75);
+    --theme-card: #fcfbf7; /* Off-white instead of stark white */
+    --theme-surface: #eeeae0; /* Darker sand for contrast */
+    --theme-panel: rgba(252, 251, 247, 0.8);
+    
+    --theme-primary: #d4af37; /* Gold for primary elements */
+    --theme-accent: #dc2626; /* Crimson Red */
+    --theme-primary-dark: #b59023;
+    --theme-glow: rgba(212, 175, 55, 0.3);
+    --theme-glow-hover: rgba(220, 38, 38, 0.3);
+    --theme-shadow: rgba(28, 25, 23, 0.05);
+    --theme-shadow-heavy: rgba(28, 25, 23, 0.1);
+    
+    --theme-text-main: #1c1917;
+    --theme-text-muted: #78716c;
+    --theme-border: rgba(212, 175, 55, 0.3); /* Gold border accents */
+    
+    --theme-grid-line: rgba(212, 175, 55, 0.05);
+    --theme-bg-gradient-top: rgba(212, 175, 55, 0.08);
+    --theme-bg-gradient-bottom: rgba(220, 38, 38, 0.05);
+    --theme-title-gradient: linear-gradient(135deg, #1c1917 10%, #d4af37 60%, #dc2626 100%);
+  }
+
+  body {
+    @apply min-h-screen font-sans antialiased overflow-x-hidden transition-colors duration-500;
+    color: var(--theme-text-main);
+    font-family: 'Inter', sans-serif;
+    background-color: var(--theme-bg);
+    background-image: 
+      linear-gradient(var(--theme-grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--theme-grid-line) 1px, transparent 1px),
+      radial-gradient(circle at 50% 0%, var(--theme-bg-gradient-top) 0%, transparent 50%),
+      radial-gradient(circle at 0% 100%, var(--theme-bg-gradient-bottom) 0%, transparent 40%);
+    background-size: 50px 50px, 50px 50px, 100% 100%, 100% 100%;
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Hanken Grotesk', sans-serif;
+    @apply tracking-wide font-normal;
+    color: var(--theme-text-main);
+  }
+
+  .luxury-title {
+    font-family: 'Hanken Grotesk', sans-serif;
+    @apply tracking-[0.3em] font-bold uppercase;
+    background: var(--theme-title-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+@layer components {
+  /* ==========================================
+     CYBER-GLASSMORPHISM (THE OBSIDIAN SHIELD)
+     ========================================== */
+  .glass-card {
+    background: var(--theme-panel) !important;
+    backdrop-filter: blur(25px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+    border: 1px solid var(--theme-border) !important;
+    box-shadow: 
+      0 30px 60px -15px var(--theme-shadow),
+      inset 0 1px 0 var(--theme-border) !important;
+    @apply rounded-2xl p-6 transition-all duration-500 relative overflow-hidden;
+  }
+
+  /* Specular Highlight Gloss Lines */
+  .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(
+      115deg,
+      transparent,
+      rgba(255, 255, 255, 0.01),
+      var(--theme-glow),
+      rgba(255, 255, 255, 0.01),
+      transparent
+    );
+    transition: all 0.8s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .glass-card:hover::before {
+    left: 150%;
+  }
+
+  .glass-card:hover {
+    @apply -translate-y-1.5 !important;
+    background: var(--theme-card) !important;
+    border-color: var(--theme-glow-hover) !important;
+    box-shadow: 
+      0 40px 80px -20px var(--theme-shadow-heavy),
+      0 0 35px var(--theme-glow),
+      inset 0 1px 0 var(--theme-border) !important;
+  }
+
+  /* Large Cyber Panels */
+  .glass-panel {
+    background: var(--theme-panel) !important;
+    backdrop-filter: blur(30px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(30px) saturate(160%) !important;
+    border: 1px solid var(--theme-border) !important;
+    box-shadow: 
+      0 40px 100px -25px var(--theme-shadow-heavy),
+      inset 0 1px 1px var(--theme-border) !important;
+    @apply rounded-2xl transition-all duration-500 relative;
+  }
+
+  /* Futuristic Cyber-Glow Buttons (Uiverse Inspired) */
+  .btn-primary {
+    font-family: 'Orbitron', sans-serif;
+    position: relative;
+    background: var(--theme-bg) !important;
+    color: var(--theme-text-main) !important;
+    border: none !important;
+    @apply font-bold tracking-[0.2em] uppercase text-[10px] py-4 px-6 rounded-xl transition-all duration-300 transform active:scale-95;
+    z-index: 1;
+    overflow: hidden;
+  }
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: -2px; right: -2px; bottom: -2px;
+    background: var(--theme-title-gradient);
+    z-index: -2;
+    animation: rotateGradient 3s linear infinite;
+    background-size: 200% 200%;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    top: 1px; left: 1px; right: 1px; bottom: 1px;
+    background: var(--theme-card);
+    z-index: -1;
+    border-radius: 11px;
+    transition: background 0.3s;
+  }
+  .btn-primary:hover::after {
+    background: transparent;
+  }
+  .btn-primary:hover {
+    color: #fff !important;
+    box-shadow: 0 0 20px var(--theme-glow-hover), 0 0 40px var(--theme-glow);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  }
+  @keyframes rotateGradient {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Sweep Border Button */
+  .btn-secondary {
+    font-family: 'Space Grotesk', sans-serif;
+    position: relative;
+    background: transparent !important;
+    color: var(--theme-text-muted);
+    border: 1px solid var(--theme-border) !important;
+    @apply font-medium tracking-[0.15em] uppercase text-[10px] py-4 px-6 rounded-xl transition-all duration-500 overflow-hidden active:scale-95;
+    z-index: 1;
+  }
+  .btn-secondary::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, var(--theme-glow), transparent);
+    transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+    z-index: -1;
+  }
+  .btn-secondary:hover::before {
+    left: 100%;
+  }
+  .btn-secondary:hover {
+    border-color: var(--theme-primary) !important;
+    color: var(--theme-text-main);
+    box-shadow: 0 0 15px var(--theme-glow);
+  }
+
+  /* Glitch/Pulse Danger Button */
+  .btn-danger {
+    font-family: 'Orbitron', sans-serif;
+    background: rgba(220, 38, 38, 0.1) !important;
+    border: 1px solid rgba(220, 38, 38, 0.3) !important;
+    color: #fca5a5 !important;
+    @apply font-bold tracking-[0.2em] uppercase text-[10px] py-4 px-6 rounded-xl transition-all duration-300 transform active:scale-95;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-danger:hover {
+    background: rgba(220, 38, 38, 0.8) !important;
+    color: #fff !important;
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3) !important;
+    animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+  }
+  @keyframes glitch {
+    0% { transform: translate(0) }
+    20% { transform: translate(-2px, 1px) }
+    40% { transform: translate(-1px, -1px) }
+    60% { transform: translate(2px, 1px) }
+    80% { transform: translate(1px, -1px) }
+    100% { transform: translate(0) }
+  }
+
+  /* Drifting Glowing Space Spheres */
+  .glass-blob {
+    @apply absolute rounded-full blur-[160px] pointer-events-none opacity-50 mix-blend-screen;
+    background: radial-gradient(circle, var(--blob-color, var(--theme-glow)) 0%, transparent 70%);
+    animation: drift 20s ease-in-out infinite alternate;
+  }
+}
+
+/* Scrollbar System */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--theme-bg); 
+}
+ 
+::-webkit-scrollbar-thumb {
+  background: var(--theme-border); 
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--theme-glow-hover); 
+}
+
+/* ==========================================
+   COMPREHENSIVE ANTD CYBER OVERRIDES
+   ========================================== */
+
+/* Ant Modals with True Glassmorphism */
+.ant-modal-content {
+  background: rgba(255, 255, 255, 0.07) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 
+    0 50px 100px var(--theme-shadow-heavy),
+    0 0 50px var(--theme-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  color: var(--theme-text-main) !important;
+  overflow: hidden;
+}
+
+.theme-cream-white .ant-modal-content {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 
+    0 50px 100px rgba(0, 0, 0, 0.06),
+    0 0 40px var(--theme-glow) !important;
+}
+
+.ant-modal-content .ant-input, 
+.ant-modal-content .ant-input-number, 
+.ant-modal-content .ant-picker, 
+.ant-modal-content .ant-select-selector, 
+.ant-modal-content .ant-input-affix-wrapper {
+  background-color: rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.theme-cream-white .ant-modal-content .ant-input, 
+.theme-cream-white .ant-modal-content .ant-input-number, 
+.theme-cream-white .ant-modal-content .ant-picker, 
+.theme-cream-white .ant-modal-content .ant-select-selector, 
+.theme-cream-white .ant-modal-content .ant-input-affix-wrapper {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+.theme-cream-white .ant-modal-header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+.ant-modal-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding: 24px 32px !important;
+}
+
+.ant-modal-title {
+  color: var(--theme-text-main) !important;
+  font-family: 'Hanken Grotesk', sans-serif !important;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.ant-modal-close-icon {
+  color: var(--theme-text-muted) !important;
+  transition: color 0.3s;
+}
+
+.ant-modal-close-icon:hover {
+  color: var(--theme-primary) !important;
+}
+
+.ant-modal-body {
+  padding: 32px !important;
+}
+
+.ant-modal-footer {
+  border-top: 1px solid var(--theme-border) !important;
+  padding: 20px 32px !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px);
+}
+
+.theme-cream-white .ant-modal-footer {
+  background: rgba(255, 255, 255, 0.8) !important;
+}
+
+.ant-modal-footer button.ant-btn {
+  @apply rounded-xl font-bold px-6 h-11 text-[9px] tracking-[0.2em] uppercase transition-all duration-300 border-none;
+}
+
+.ant-modal-footer button.ant-btn-default {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-text-main) !important;
+}
+
+.ant-modal-footer button.ant-btn-default:hover {
+  background: var(--theme-border) !important;
+  color: var(--theme-primary) !important;
+}
+
+.ant-modal-footer button.ant-btn-primary {
+  background: var(--theme-title-gradient) !important;
+  color: #000 !important;
+}
+
+/* Form Labels */
+.ant-form-item-label > label {
+  color: var(--theme-text-main) !important;
+  opacity: 0.9;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Form Fields - Cyber Translucent */
+.ant-input, .ant-input-number, .ant-picker, .ant-select-selector, .ant-input-affix-wrapper {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 12px !important;
+  color: var(--theme-text-main) !important;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  position: relative;
+}
+
+.ant-input, .ant-input-number, .ant-picker, .ant-input-affix-wrapper {
+  padding: 8px 16px !important;
+}
+
+.ant-select-selector {
+  height: 40px !important;
+  padding: 0 16px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-select-selection-item, .ant-select-selection-placeholder {
+  line-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Fix Date Picker Input Text Visibility */
+.ant-picker-input > input {
+  color: var(--theme-text-main) !important;
+}
+.ant-picker-input > input::placeholder {
+  color: var(--theme-text-muted) !important;
+}
+.ant-picker-suffix, .ant-picker-clear {
+  color: var(--theme-text-muted) !important;
+  background: transparent !important;
+}
+
+/* Fix Input Number Hover Arrows (White Background Issue) */
+.ant-input-number-handler-wrap {
+  background: transparent !important;
+  border-left: 1px solid var(--theme-border) !important;
+}
+.ant-input-number-handler {
+  border-bottom: 1px solid var(--theme-border) !important;
+  background: transparent !important;
+  color: var(--theme-text-muted) !important;
+}
+.ant-input-number-handler:hover {
+  color: var(--theme-primary) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+.ant-input-number-handler-up-inner, .ant-input-number-handler-down-inner {
+  color: inherit !important;
+}
+.ant-input-number-input {
+  color: var(--theme-text-main) !important;
+}
+
+/* Fix Input Affix & Group Addons */
+.ant-input-affix-wrapper > input.ant-input,
+.ant-input-group .ant-input {
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 16px !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+
+.ant-input-group-addon {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--theme-border) !important;
+  color: var(--theme-primary) !important;
+  border-radius: 12px 0 0 12px !important;
+  padding: 0 16px !important;
+}
+
+.ant-input-group > .ant-input:last-child {
+  border-radius: 0 12px 12px 0 !important;
+  border: 1px solid var(--theme-border) !important;
+  border-left: none !important;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+.ant-input-affix-wrapper .ant-input-prefix,
+.ant-input-group-addon {
+  color: var(--theme-primary) !important;
+  margin-right: 8px;
+  pointer-events: none !important; /* Allow clicks to pass through to the input */
+}
+
+/* Re-enable clicks for buttons inside input groups */
+.ant-input-group-addon button {
+  pointer-events: auto !important;
+}
+
+/* Currency input prefix spacing — forces padding so ₹ icon doesn't overlap text */
+.rupee-input-wrapper .ant-input,
+.rupee-input-wrapper input {
+  padding-left: 2.5rem !important;
+}
+
+.ant-input:hover, .ant-input-number:hover, .ant-picker:hover, .ant-select-selector:hover, .ant-input-affix-wrapper:hover, .ant-input-group-addon:hover {
+  border-color: var(--theme-border) !important;
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.ant-input:focus, .ant-input-focused, 
+.ant-input-number-focused, .ant-picker-focused,
+.ant-select-focused .ant-select-selector,
+.ant-input-affix-wrapper-focused {
+  border-color: transparent !important;
+  box-shadow: 0px 4px 20px var(--theme-glow), inset 0px -2px 0px var(--theme-primary) !important;
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  transform: translateY(-1px);
+}
+
+/* Cyber Tables */
+.ant-table {
+  background: transparent !important;
+  color: var(--theme-text-main) !important;
+  font-family: 'Inter', sans-serif;
+}
+
+.ant-table-thead > tr > th {
+  background: rgba(255, 255, 255, 0.02) !important;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--theme-border) !important;
+  color: var(--theme-text-muted) !important;
+  font-family: 'Orbitron', sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+}
+
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: transparent !important;
+  transition: all 0.3s;
+}
+
+.ant-table-tbody > tr:hover > td {
+  background: rgba(255, 255, 255, 0.03) !important;
+  box-shadow: inset 0 0 15px var(--theme-glow);
+}
+
+.ant-pagination {
+  color: var(--theme-text-main) !important;
+}
+
+.ant-pagination-item {
+  background: transparent !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 8px;
+}
+
+.ant-pagination-item a {
+  color: var(--theme-text-muted) !important;
+}
+
+.ant-pagination-item-active {
+  background: var(--theme-glow) !important;
+  border-color: var(--theme-primary) !important;
+}
+
+.ant-pagination-item-active a {
+  color: var(--theme-primary) !important;
+}
+
+/* Cyber Select Dropdowns */
+.ant-select-dropdown {
+  background: rgba(15, 15, 15, 0.9) !important;
+  backdrop-filter: blur(25px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(25px) saturate(180%) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 20px 40px var(--theme-shadow-heavy), 0 0 20px var(--theme-glow) !important;
+  border-radius: 12px !important;
+}
+
+.ant-select-item {
+  color: var(--theme-text-muted) !important;
+  transition: all 0.3s;
+}
+
+.ant-select-item-option-active:not(.ant-select-item-option-disabled) {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--theme-text-main) !important;
+}
+
+.ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+  background-color: var(--theme-glow) !important;
+  color: var(--theme-primary) !important;
+  font-weight: 600;
+}
+
+/* Tooltips */
+.ant-tooltip-inner {
+  background-color: var(--theme-card) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 10px 20px var(--theme-shadow-heavy), 0 0 15px var(--theme-glow) !important;
+  color: var(--theme-text-main) !important;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.ant-tooltip-arrow-content {
+  background-color: var(--theme-card) !important;
+}
+
+/* Popconfirm */
+.ant-popover-inner {
+  background-color: var(--theme-card) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 20px 40px var(--theme-shadow-heavy), 0 0 25px var(--theme-glow) !important;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.ant-popover-inner-content {
+  color: var(--theme-text-main) !important;
+}
+
+.ant-popover-message-title {
+  color: var(--theme-text-main) !important;
+  font-family: 'Hanken Grotesk', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.ant-popover-buttons button {
+  border-radius: 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.ant-popover-buttons .ant-btn-primary {
+  background: var(--theme-title-gradient) !important;
+  border: none !important;
+  color: #000 !important;
+}
+
+/* DatePicker Panels */
+.ant-picker-dropdown {
+  background: rgba(15, 15, 15, 0.95) !important;
+  backdrop-filter: blur(30px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(180%) !important;
+  border: 1px solid var(--theme-border) !important;
+  box-shadow: 0 20px 50px var(--theme-shadow-heavy), 0 0 30px var(--theme-glow) !important;
+  border-radius: 16px !important;
+  overflow: hidden;
+}
+
+.theme-cream-white .ant-picker-dropdown {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08) !important;
+}
+
+.ant-picker-panel-container {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+}
+
+.ant-picker-panel {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-cream-white .ant-picker-panel {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Header & Text Colors */
+.ant-picker-header {
+  color: var(--theme-text-main) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-cream-white .ant-picker-header {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.05) !important;
+}
+
+.ant-picker-header button {
+  color: var(--theme-text-muted) !important;
+  transition: color 0.3s;
+}
+
+.ant-picker-header button:hover {
+  color: var(--theme-primary) !important;
+}
+
+.ant-picker-content th {
+  color: var(--theme-text-muted) !important;
+}
+
+/* Calendar Cells */
+.ant-picker-cell {
+  color: var(--theme-text-muted) !important;
+}
+
+.ant-picker-cell-in-view {
+  color: var(--theme-text-main) !important;
+}
+
+.ant-picker-cell-inner {
+  border-radius: 8px !important;
+  transition: all 0.3s !important;
+}
+
+.ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-disabled) .ant-picker-cell-inner {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-cream-white .ant-picker-cell:hover:not(.ant-picker-cell-selected):not(.ant-picker-cell-disabled) .ant-picker-cell-inner {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Selected Date */
+.ant-picker-cell-selected .ant-picker-cell-inner {
+  background: var(--theme-title-gradient) !important;
+  color: #000 !important;
+  font-weight: bold;
+  box-shadow: 0 0 15px var(--theme-glow);
+}
+
+.theme-cream-white .ant-picker-cell-selected .ant-picker-cell-inner {
+  color: #fff !important;
+}
+
+/* Today Date */
+.ant-picker-cell-today .ant-picker-cell-inner::before {
+  border-color: var(--theme-primary) !important;
+  border-radius: 8px !important;
+}
+
+/* Time Picker Panels */
+.ant-picker-time-panel-column {
+  border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+  position: relative;
+}
+
+.theme-cream-white .ant-picker-time-panel-column {
+  border-left: 1px solid rgba(15, 23, 42, 0.05) !important;
+}
+
+.ant-picker-time-panel-column::after {
+  content: '';
+  display: block;
+  height: 180px; /* Spacer to allow last items to scroll fully */
+}
+
+.ant-picker-time-panel-cell {
+  position: relative;
+  top: 90px; /* Shift visually to the center of the panel */
+}
+
+.ant-picker-time-panel-cell-inner {
+  color: var(--theme-text-main) !important;
+  border-radius: 8px !important;
+}
+
+.ant-picker-time-panel-cell:hover .ant-picker-time-panel-cell-inner {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.theme-cream-white .ant-picker-time-panel-cell:hover .ant-picker-time-panel-cell-inner {
+  background: rgba(15, 23, 42, 0.04) !important;
+}
+
+.ant-picker-time-panel-cell-selected .ant-picker-time-panel-cell-inner {
+  background: var(--theme-glow) !important;
+  color: var(--theme-primary) !important;
+  font-weight: bold;
+}
+
+/* Footer / Today Button */
+.ant-picker-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: transparent !important;
+}
+
+.theme-cream-white .ant-picker-footer {
+  border-top: 1px solid rgba(15, 23, 42, 0.05) !important;
+}
+
+.ant-picker-today-btn {
+  color: var(--theme-primary) !important;
+}
+
+.ant-picker-today-btn:hover {
+  text-shadow: 0 0 8px var(--theme-glow);
+}
+
+.ant-picker-now-btn {
+  color: var(--theme-primary) !important;
+}
+
+.ant-picker-ok > button {
+  background: var(--theme-title-gradient) !important;
+  border: none !important;
+  color: #000 !important;
+  border-radius: 8px !important;
+  font-weight: bold;
+}
+
+/* Sidebar Menu Overrides */
+.ant-menu {
+  background: transparent !important;
+  color: var(--theme-text-muted) !important;
+  border-right: none !important;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.1em;
+}
+
+.ant-menu-item {
+  margin-bottom: 8px !important;
+  border-radius: 12px !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.ant-menu-item:hover {
+  color: var(--theme-text-main) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.ant-menu-item-selected {
+  background: rgba(220, 38, 38, 0.15) !important;
+  color: var(--theme-accent) !important;
+  font-weight: 600;
+  border-right: 3px solid var(--theme-accent) !important;
+  box-shadow: inset 0 0 15px rgba(220, 38, 38, 0.1) !important;
+}
+
+.ant-menu-item-selected a,
+.ant-menu-item-selected .anticon {
+  color: var(--theme-accent) !important;
+}
+
+.ant-menu-item a {
+  color: inherit !important;
+}
+
+.ant-menu-item .anticon {
+  color: inherit !important;
+  transition: all 0.3s;
+}
+
+.ant-menu-item:hover .anticon {
+  transform: scale(1.1);
+  color: var(--theme-text-main) !important;
+}
+
+/* Light Theme overrides for Menu */
+.theme-cream-white .ant-menu-item-selected {
+  background: rgba(180, 83, 9, 0.1) !important;
+  color: var(--theme-accent) !important;
+  border-right: 3px solid var(--theme-accent) !important;
+}
+.theme-cream-white .ant-menu-item-selected a,
+.theme-cream-white .ant-menu-item-selected .anticon {
+  color: var(--theme-accent) !important;
+}
+.theme-cream-white .ant-menu-item:hover {
+  background: rgba(15, 23, 42, 0.04) !important;
+  color: var(--theme-primary) !important;
+}
+
+/* ==========================================
+   PREMIUM BOOKING STATUS BADGES (RED THEME)
+   ========================================== */
+.status-confirmed .ant-select-selector,
+.status-checked-in .ant-select-selector,
+.status-checked-out .ant-select-selector {
+  border-radius: 20px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.65rem;
+  transition: all 0.4s ease !important;
+}
+
+/* Confirmed: Soft Red outline */
+.status-confirmed .ant-select-selector {
+  background: rgba(220, 38, 38, 0.05) !important;
+  border: 1px solid rgba(220, 38, 38, 0.4) !important;
+  color: #fca5a5 !important;
+  box-shadow: 0 0 10px rgba(220, 38, 38, 0.1);
+}
+
+/* Checked In: Vibrant Glowing Red with Pulse Animation */
+@keyframes redPulse {
+  0% { box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(220, 38, 38, 0.6), inset 0 0 10px rgba(220, 38, 38, 0.2); }
+  100% { box-shadow: 0 0 10px rgba(220, 38, 38, 0.2); }
+}
+
+.status-checked-in .ant-select-selector {
+  background: rgba(220, 38, 38, 0.15) !important;
+  border: 1px solid rgba(220, 38, 38, 0.8) !important;
+  color: #ffffff !important;
+  animation: redPulse 2s infinite;
+}
+
+/* Checked Out: Dimmed Red */
+.status-checked-out .ant-select-selector {
+  background: transparent !important;
+  border: 1px dashed rgba(220, 38, 38, 0.3) !important;
+  color: rgba(252, 165, 165, 0.5) !important;
+}
+
+/* Color the dropdown arrow Red */
+.status-confirmed .ant-select-arrow,
+.status-checked-in .ant-select-arrow,
+.status-checked-out .ant-select-arrow {
+  color: rgba(220, 38, 38, 0.8) !important;
+}
+
+/* ==========================================
+   PREMIUM BOOKING STATUS RADIOS (RED THEME)
+   ========================================== */
+.premium-status-radio .ant-radio-wrapper {
+  color: var(--theme-text-muted) !important;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.3s ease;
+  padding: 6px 16px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+
+.premium-status-radio .ant-radio-inner {
+  background-color: transparent !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Checked state generic gold overrides */
+.premium-status-radio .ant-radio-wrapper-checked {
+  font-weight: 600;
+}
+
+.premium-status-radio .ant-radio-wrapper-checked .ant-radio-inner {
+  border-color: var(--theme-primary) !important;
+  background-color: transparent !important;
+}
+
+.premium-status-radio .ant-radio-wrapper-checked .ant-radio-inner::after {
+  background-color: var(--theme-primary) !important;
+}
+
+/* Confirmed (Reserved) Styling */
+.status-radio-confirmed.ant-radio-wrapper-checked {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  color: var(--theme-primary) !important;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.1) !important;
+}
+
+/* Checked In (Active) Styling */
+.status-radio-active.ant-radio-wrapper-checked {
+  background: rgba(212, 175, 55, 0.15) !important;
+  border: 1px solid var(--theme-primary) !important;
+  color: #ffffff !important;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Checked Out Styling */
+.status-radio-completed.ant-radio-wrapper-checked {
+  background: transparent !important;
+  border: 1px dashed rgba(212, 175, 55, 0.3) !important;
+  color: rgba(212, 175, 55, 0.6) !important;
+}
+
+/* Custom Gold Focus Shadow */
+.premium-status-radio .ant-radio-input:focus + .ant-radio-inner {
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1) !important;
+}
+
+/* ═══════════════ Checkout Alert Modal Premium Styling ═══════════════ */
+.checkout-alert-modal .ant-modal-content {
+  background: var(--theme-card) !important;
+  border: 1px solid var(--theme-border) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 25px 60px -12px rgba(0,0,0,0.8), 0 0 40px var(--theme-glow) !important;
+  overflow: hidden;
+}
+
+.checkout-alert-modal .ant-modal-header {
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.06) 0%, transparent 50%, rgba(220, 38, 38, 0.04) 100%) !important;
+  border-bottom: 1px solid var(--theme-border) !important;
+  padding: 16px 24px !important;
+}
+
+.checkout-alert-modal .ant-modal-body {
+  background: transparent !important;
+  padding: 20px 24px !important;
+}
+
+.checkout-alert-modal .ant-modal-footer {
+  background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.03) 100%) !important;
+  border-top: 1px solid var(--theme-border) !important;
+  padding: 14px 24px !important;
+}
+
+/* Timeframe Pill Buttons */
+.timeframe-pill {
+  color: var(--theme-text-muted) !important;
+  border-color: transparent !important;
+  background: transparent !important;
+}
+.timeframe-pill:hover {
+  border-color: var(--theme-border) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: white !important;
+}
+.timeframe-pill-active {
+  background-color: var(--theme-glow) !important;
+  color: var(--theme-primary) !important;
+  border-color: var(--theme-primary) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 12px var(--theme-glow) !important;
+}
+
+/* Premium Button Styles */
+.premium-btn-snooze {
+  border: 1px solid var(--theme-border) !important;
+  background: transparent !important;
+}
+.premium-btn-snooze:hover {
+  border-color: rgba(212, 175, 55, 0.4) !important;
+  background: rgba(212, 175, 55, 0.05) !important;
+  color: var(--theme-primary) !important;
+}
+
+.premium-btn-extend {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  color: var(--theme-primary) !important;
+}
+.premium-btn-extend:hover {
+  background: rgba(212, 175, 55, 0.15) !important;
+  border-color: var(--theme-primary) !important;
+  color: var(--theme-primary) !important;
+}
+
+.premium-btn-checkout {
+  background: linear-gradient(90deg, var(--theme-accent) 0%, #b91c1c 100%) !important;
+  border: none !important;
+  color: white !important;
+}
+.premium-btn-checkout:hover {
+  box-shadow: 0 0 25px rgba(220, 38, 38, 0.4) !important;
+  transform: scale(1.02) !important;
+  color: white !important;
+}
+
+/* Dark Theme Upload Component */
+nz-upload.dark-theme-upload .ant-upload.ant-upload-drag {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+  border: 2px dashed var(--theme-border) !important;
+  border-radius: 12px !important;
+  transition: all 0.3s ease !important;
+}
+nz-upload.dark-theme-upload .ant-upload.ant-upload-drag:hover {
+  border-color: var(--theme-primary) !important;
+  background-color: rgba(212, 175, 55, 0.05) !important;
+}
+nz-upload.dark-theme-upload .ant-upload.ant-upload-drag p.ant-upload-text {
+  color: #fbbf24 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  margin-top: 12px !important;
+}
+nz-upload.dark-theme-upload .ant-upload.ant-upload-drag p.ant-upload-hint {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+nz-upload.dark-theme-upload .ant-upload-list-item {
+  color: var(--theme-text-main) !important;
+}
+nz-upload.dark-theme-upload .ant-upload-list-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+nz-upload.dark-theme-upload .ant-upload-list-item-name {
+  color: var(--theme-text-main) !important;
+}
+nz-upload.dark-theme-upload .ant-upload-list-item-info {
+  border-radius: 8px !important;
+}

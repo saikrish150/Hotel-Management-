@@ -1,0 +1,205 @@
+<div class="space-y-8 pb-10">
+  
+  <!-- Header -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
+    <div>
+      <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Reports & Financial Breakdown</h2>
+      <p class="text-sm text-[var(--theme-text-muted)] mt-2">Comprehensive Profitability, Budget Variance, and Unit Yield Audit</p>
+    </div>
+    
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Search Input -->
+      <div class="relative w-64">
+        <input 
+          type="text" 
+          placeholder="Search reports..." 
+          [(ngModel)]="searchQuery"
+          class="w-full h-10 bg-[var(--theme-surface)] text-[var(--theme-text-main)] border border-[var(--theme-border)] rounded-xl px-4 pl-10 text-xs focus:outline-none focus:border-[var(--theme-primary)] focus:shadow-[0_0_15px_var(--theme-glow)] transition-all placeholder-gray-500"
+        />
+        <span nz-icon nzType="search" class="absolute left-4 top-3 text-[var(--theme-text-muted)] text-sm"></span>
+      </div>
+ 
+      <!-- Action Buttons -->
+      <button nz-button class="bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 hover:border-[var(--theme-border)]/40 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2">
+        <span nz-icon nzType="file-pdf" nzTheme="outline"></span> Export PDF
+      </button>
+      <button nz-button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2">
+        <span nz-icon nzType="file-excel" nzTheme="outline"></span> Export Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- Time Filter Tabs & loading state -->
+  <div class="flex items-center justify-between">
+    <div class="flex bg-[var(--theme-surface)] rounded-xl p-1 border border-[var(--theme-border)]">
+      <button 
+        (click)="selectQuarter('Q1')" 
+        [class]="selectedQuarter === 'Q1' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
+      >Q1</button>
+      <button 
+        (click)="selectQuarter('Q2')" 
+        [class]="selectedQuarter === 'Q2' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
+      >Q2</button>
+      <button 
+        (click)="selectQuarter('Q3')" 
+        [class]="selectedQuarter === 'Q3' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
+      >Q3</button>
+      <button 
+        (click)="selectQuarter('Q4')" 
+        [class]="selectedQuarter === 'Q4' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
+      >Q4 2026</button>
+    </div>
+  </div>
+
+  <nz-spin [nzSpinning]="loading">
+    <div class="space-y-8">
+      
+      <!-- KPI Cards (4 columns) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        
+        <!-- 1: Total Revenue -->
+        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div>
+            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">TOTAL REVENUE</p>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(totalRevenue) }}</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ revenueGrowth }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          </div>
+          <span nz-icon nzType="bank" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+        </div>
+
+        <!-- 2: Operating Expenses -->
+        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div>
+            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">OPERATING EXPENSES</p>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(totalExpenses) }}</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ expenseGrowth }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          </div>
+          <span nz-icon nzType="shopping-cart" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+        </div>
+
+        <!-- 3: Net Income -->
+        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div>
+            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">NET INCOME</p>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(netIncome) }}</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ incomeGrowth }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          </div>
+          <span nz-icon nzType="wallet" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+        </div>
+
+        <!-- 4: Profit Margin -->
+        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div>
+            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">PROFIT MARGIN</p>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ profitMargin | number:'1.1-1' }}%</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ marginGrowth }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          </div>
+          <span nz-icon nzType="rise" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+        </div>
+
+      </div>
+
+      <!-- Table: Comprehensive Breakdown -->
+      <div class="glass-card p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Comprehensive Breakdown</h3>
+          <button class="bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
+            <span nz-icon nzType="filter" nzTheme="outline"></span> Filter
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-[var(--theme-border)] text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">
+                <th class="pb-3 w-1/3">Category</th>
+                <th class="pb-3 text-right">Actual</th>
+                <th class="pb-3 text-right">Budget</th>
+                <th class="pb-3 text-right">Variance</th>
+                <th class="pb-3 text-center">Status</th>
+                <th class="pb-3"></th>
+              </tr>
+            </thead>
+            <tbody class="text-sm">
+              <ng-container *ngFor="let cat of filteredCategories">
+                
+                <!-- Main Category Row -->
+                <tr 
+                  (click)="toggleCategory(cat)"
+                  class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 transition-all cursor-pointer"
+                >
+                  <td class="py-4 font-medium text-[var(--theme-text-main)] flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-[var(--theme-border)]/10 flex items-center justify-center text-[var(--theme-primary)] border border-[var(--theme-border)]">
+                      <span nz-icon [nzType]="cat.icon" nzTheme="outline" class="text-sm"></span>
+                    </div>
+                    <span>{{ cat.name }}</span>
+                  </td>
+                  <td class="py-4 text-right text-[var(--theme-text-main)] font-medium">₹{{ cat.actual.toLocaleString() }}</td>
+                  <td class="py-4 text-right text-[var(--theme-text-muted)]">₹{{ cat.budget.toLocaleString() }}</td>
+                  <td class="py-4 text-right font-medium" [ngClass]="cat.variance >= 0 ? 'text-amber-500' : 'text-rose-500'">
+                    {{ formatVariance(cat.variance) }}
+                  </td>
+                  <td class="py-4 text-center">
+                    <span 
+                      class="px-3 py-1.5 rounded-xl text-[9px] font-semibold uppercase tracking-widest"
+                      [ngClass]="{
+                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15': cat.status === 'On Target',
+                        'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/15': cat.status === 'Optimal',
+                        'bg-gray-500/10 text-[var(--theme-text-muted)] border border-[var(--theme-border)]': cat.status === 'Under Review'
+                      }"
+                    >
+                      {{ cat.status }}
+                    </span>
+                  </td>
+                  <td class="py-4 text-right text-[var(--theme-text-muted)] pr-2">
+                    <span nz-icon [nzType]="cat.expanded ? 'up' : 'down'" class="text-xs transition-transform duration-300"></span>
+                  </td>
+                </tr>
+
+                <!-- Expanded Sub-row Card (Horizontal flex columns matching screenshot) -->
+                <tr *ngIf="cat.expanded">
+                  <td colspan="6" class="p-0 bg-[var(--theme-border)]/5">
+                    <div class="px-8 py-5 border-b border-[var(--theme-border)] flex gap-12 flex-wrap">
+                      <div *ngFor="let sub of cat.subItems" class="flex flex-col min-w-[150px]">
+                        <span class="text-[10px] text-[var(--theme-text-muted)] uppercase tracking-wider mb-1">{{ sub.name }}</span>
+                        <div class="flex items-baseline gap-2">
+                          <span class="text-[var(--theme-text-main)] font-semibold">₹{{ sub.actual.toLocaleString() }}</span>
+                          <span [class]="sub.trend.startsWith('+') ? 'text-[10px] text-emerald-500 font-bold' : 'text-[10px] text-[var(--theme-text-muted)] font-semibold'">
+                            ({{ sub.trend }})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+
+              </ng-container>
+
+              <!-- Total Row -->
+              <tr class="font-semibold text-[var(--theme-text-main)] bg-[var(--theme-border)]/5">
+                <td class="py-5">Total</td>
+                <td class="py-5 text-right font-semibold text-[var(--theme-text-main)]">₹{{ totalRevenue.toLocaleString() }}</td>
+                <td class="py-5 text-right text-[var(--theme-text-muted)]">₹{{ totalBudget.toLocaleString() }}</td>
+                <td class="py-5 text-right text-amber-500">{{ formatVariance(totalVariance) }}</td>
+                <td colspan="2" class="py-5"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </nz-spin>
+</div>
