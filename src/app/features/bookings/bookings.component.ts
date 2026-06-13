@@ -100,7 +100,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
         <div class="flex flex-col gap-3 mb-4">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">Bookings Ledger</span>
+              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">{{ hotelName }}</span>
             </div>
             <button *ngIf="hasActiveFilters()" nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-white text-xs flex items-center gap-1" (click)="resetBookingFilters()">
               <span nz-icon nzType="close"></span> Clear All Filters
@@ -242,11 +242,11 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
                     <span *ngSwitchCase="'number_of_people'">{{ data.number_of_people || 1 }}</span>
                     <span *ngSwitchCase="'number_of_days'">{{ data.number_of_days || 1 }}</span>
                     <span *ngSwitchCase="'amount_paid'" class="text-emerald-400">₹{{ (data.amount_paid || 0) | number }}</span>
-                    <span *ngSwitchCase="'check_out'">{{ data.check_out | date:'dd MMM yyyy HH:mm' }}</span>
+                    <span *ngSwitchCase="'check_out'">{{ (data.status === 'Checked Out' || data.status === 'checked out') && data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : (data.check_out | date:'dd MMM yyyy HH:mm') }}</span>
                     <span *ngSwitchCase="'actual_checkout'">{{ data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : '-' }}</span>
                     
                     <ng-container *ngSwitchCase="'id_documents'">
-                      <button *ngIf="data.id_documents?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:text-[var(--theme-primary-dark)] text-xs font-semibold px-2 flex items-center justify-center m-auto" (click)="viewAttachments(data.id_documents)">
+                      <button *ngIf="data.id_documents?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:!text-amber-300 hover:!bg-transparent focus:!text-amber-300 focus:!bg-transparent active:!bg-transparent text-xs font-semibold px-2 flex items-center justify-center m-auto transition-colors" (click)="viewAttachments(data.id_documents)">
                         View ({{data.id_documents.length}})
                       </button>
                       <span *ngIf="!data.id_documents?.length" class="text-[var(--theme-text-muted)]">-</span>
@@ -259,7 +259,6 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
                                  [class.status-confirmed]="data.status === 'Confirmed'"
                                  [class.status-checked-in]="data.status === 'Checked In'"
                                  [class.status-checked-out]="data.status === 'Checked Out'">
-                        <nz-option nzValue="Confirmed" nzLabel="Confirmed"></nz-option>
                         <nz-option nzValue="Checked In" nzLabel="Check In"></nz-option>
                         <nz-option nzValue="Checked Out" nzLabel="Check Out"></nz-option>
                       </nz-select>
@@ -603,13 +602,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
             </div>
           </div>
           
-          <div class="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-start gap-3">
-            <span nz-icon nzType="info-circle" class="text-base mt-0.5"></span>
-            <div>
-              <strong class="block mb-1 text-red-300">Images showing broken?</strong>
-              This usually means your Supabase Storage Bucket is missing the correct Security Policies (RLS) to allow downloads. Make sure you have created the <b>"Allow authenticated selects"</b> policy for the <code>hotel-documents</code> bucket.
-            </div>
-          </div>
+
         </div>
       </ng-container>
     </nz-modal>
@@ -662,6 +655,11 @@ export class BookingsComponent implements OnInit, OnDestroy {
   columns: ColumnConfig[] = [...DEFAULT_BOOKING_COLUMNS];
   popupFields: ColumnConfig[] = [...DEFAULT_BOOKING_COLUMNS];
   private bookingsSub?: Subscription;
+
+  get hotelName(): string {
+    const profile = this.supabase.currentProfile;
+    return profile?.hotel_name || 'Room Bookings';
+  }
 
   // Computed statistics getters
   get totalGuestsRegistered(): number {
@@ -955,7 +953,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
   globalDateRange: Date[] = [];
   activeQuickFilter: string = 'check-in';
-  activePresetRange: string = 'custom';
+  activePresetRange: string = 'Today';
 
   hasActiveFilters(): boolean {
     return !!this.globalDateRange?.length || 
@@ -965,7 +963,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
            !!this.colFilterCategory || 
            !!this.colFilterName || 
            !!this.colFilterStatus || 
-           this.activePresetRange !== 'custom';
+           this.activePresetRange !== 'Today';
   }
 
   applyPresetRange(preset: string): void {
@@ -986,7 +984,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   }
 
   ngOnInit(): void {
-    // Leave globalDateRange empty by default because 'today' quick filter takes over
+    this.applyPresetRange('Today');
     this.loadBookings();
 
     this.bookingsSub = this.supabase.bookingsUpdated.subscribe(() => {
@@ -1035,7 +1033,10 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
         end.setHours(23, 59, 59, 999);
         
         const checkIn = b.check_in ? new Date(b.check_in) : null;
-        const checkOut = b.check_out ? new Date(b.check_out) : null;
+        let checkOut = b.check_out ? new Date(b.check_out) : null;
+        if ((b.status === 'Checked Out' || b.status === 'checked out') && b.actual_checkout) {
+          checkOut = new Date(b.actual_checkout);
+        }
         
         if (checkIn && checkOut) {
           matchesGlobalDate = checkIn <= end && checkOut >= start;
@@ -1047,50 +1048,13 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       // 2. Quick Filters
       let matchesQuick = true;
       if (this.activeQuickFilter === 'all') {
-        if (!this.globalDateRange || this.globalDateRange.length !== 2) {
-          // Default to 'Today' if no timeframe is selected
-          const todayStart = new Date();
-          todayStart.setHours(0, 0, 0, 0);
-          const todayEnd = new Date();
-          todayEnd.setHours(23, 59, 59, 999);
-          
-          const checkIn = b.check_in ? new Date(b.check_in) : null;
-          const checkOut = b.check_out ? new Date(b.check_out) : null;
-          
-          if (checkIn && checkOut) {
-            matchesQuick = checkIn <= todayEnd && checkOut >= todayStart;
-          } else {
-            matchesQuick = false;
-          }
-        } else {
-          matchesQuick = true; // Global date range already filters it
-        }
+        matchesQuick = true;
       } else if (this.activeQuickFilter === 'check-in') {
         matchesQuick = b.status === 'Checked In';
       } else if (this.activeQuickFilter === 'check-out') {
-        let effectiveStart = new Date();
-        effectiveStart.setHours(0, 0, 0, 0);
-        let effectiveEnd = new Date();
-        effectiveEnd.setHours(23, 59, 59, 999);
-        
-        if (this.globalDateRange && this.globalDateRange.length === 2) {
-          effectiveStart = new Date(this.globalDateRange[0]);
-          effectiveStart.setHours(0, 0, 0, 0);
-          effectiveEnd = new Date(this.globalDateRange[1]);
-          effectiveEnd.setHours(23, 59, 59, 999);
-        }
-
-        if (this.activeQuickFilter === 'check-out') {
-          const checkOutDate = b.check_out ? new Date(b.check_out) : null;
-          if (checkOutDate) {
-            matchesQuick = checkOutDate >= effectiveStart && checkOutDate <= effectiveEnd;
-          } else {
-            matchesQuick = false;
-          }
-        }
+        matchesQuick = b.status === 'Checked Out' || b.status === 'checked out';
       } else if (this.activeQuickFilter === 'confirmed') {
         matchesQuick = b.status === 'Confirmed' || b.status === 'confirmed';
-        matchesGlobalDate = true; // Bypass global date filtering for Confirmed tab
       }
 
       if (!matchesGlobalDate || !matchesQuick) return false;
@@ -1127,9 +1091,8 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     this.colFilterCategory = '';
     this.colFilterName = '';
     this.colFilterStatus = '';
-    this.globalDateRange = [];
-    this.activePresetRange = 'custom';
-    this.activeQuickFilter = 'today';
+    this.activeQuickFilter = 'check-in';
+    this.applyPresetRange('Today');
   }
 
   getBookingsKey(): string {

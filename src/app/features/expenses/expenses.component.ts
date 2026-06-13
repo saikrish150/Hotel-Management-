@@ -60,10 +60,16 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
           <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Monthly Expenses</h2>
           <p class="text-sm text-[var(--theme-text-muted)] mt-2">Operational Outflows & Ledger</p>
         </div>
-        <button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-6 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2 cursor-pointer" 
-                (click)="openAddModal()">
-          <span nz-icon nzType="plus"></span> Add Expense
-        </button>
+        <div class="flex items-center gap-3">
+          <button class="bg-[var(--theme-card)] hover:bg-[var(--theme-border)]/50 border border-[var(--theme-border)] text-[var(--theme-text-main)] rounded-xl h-10 px-4 sm:px-6 text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer" 
+                  (click)="showStandaloneIndividualExpenseModal()">
+            <span nz-icon nzType="plus"></span> Add Item
+          </button>
+          <button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-4 sm:px-6 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2 cursor-pointer" 
+                  (click)="openAddModal()">
+            <span nz-icon nzType="plus"></span> Add Month
+          </button>
+        </div>
       </div>
 
       <!-- Dynamic Operational Outflow Stats -->
@@ -215,7 +221,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
                     </ng-container>
 
                     <ng-container *ngSwitchCase="'receipts'">
-                      <button *ngIf="data.receipts?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:text-[var(--theme-primary-dark)] text-xs font-semibold px-2 flex items-center justify-center m-auto" (click)="viewAttachments(data.receipts)">
+                      <button *ngIf="data.receipts?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:!text-amber-300 hover:!bg-transparent focus:!text-amber-300 focus:!bg-transparent active:!bg-transparent text-xs font-semibold px-2 flex items-center justify-center m-auto transition-colors" (click)="viewAttachments(data.receipts)">
                         View ({{data.receipts.length}})
                       </button>
                       <span *ngIf="!data.receipts?.length" class="text-[var(--theme-text-muted)] flex justify-center">-</span>
@@ -229,10 +235,10 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
                 </td>
               </ng-container>
               <td class="py-4 bg-transparent border-none text-right">
-                <button nz-button nzType="text" class="text-amber-500 hover:text-amber-400 transition-colors p-0 mr-4" (click)="openEditModal(data)">
+                <button type="button" class="text-amber-500 hover:text-amber-400 transition-colors p-0 mr-4 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="openEditModal(data)">
                   <span nz-icon nzType="edit" class="text-base"></span>
                 </button>
-                <button nz-button nzType="text" class="text-rose-500 hover:text-rose-400 transition-colors p-0" nz-popconfirm nzPopconfirmTitle="Are you sure to delete all expenses for this month?" (nzOnConfirm)="deleteExpenseGroup(data)">
+                <button type="button" class="text-rose-500 hover:text-rose-400 transition-colors p-0 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" nz-popconfirm nzPopconfirmTitle="Are you sure to delete all expenses for this month?" (nzOnConfirm)="deleteExpenseGroup(data)">
                   <span nz-icon nzType="delete" class="text-base"></span>
                 </button>
               </td>
@@ -331,7 +337,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
           <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleCancel()">
             Cancel
           </button>
-          <button nz-button [nzLoading]="isOkLoading" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="handleOk()">
+          <button nz-button [nzLoading]="isOkLoading" [disabled]="monthAlreadyExists && !editingMonthYear" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed" (click)="handleOk()">
             {{ editingMonthYear ? 'Save Changes' : 'Add Expense' }}
           </button>
         </div>
@@ -339,6 +345,10 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
 
       <ng-container *nzModalContent>
         <form nz-form nzLayout="vertical" [formGroup]="expenseForm" class="p-2">
+          <div *ngIf="monthAlreadyExists && !editingMonthYear" class="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center gap-2">
+            <span nz-icon nzType="warning" class="text-base"></span>
+            <span>An expense record for this month already exists. Please edit it from the main table instead.</span>
+          </div>
           <div nz-row [nzGutter]="[16, 12]">
             <ng-container *ngFor="let field of popupFields">
               <div *ngIf="field.visible && field.key !== 'total_amount'" nz-col nzXs="24" [nzSm]="field.key === 'month_year' ? 16 : 8">
@@ -447,11 +457,50 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
             </ng-container>
           </div>
 
+          <!-- Individual Expenses Section -->
+          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
+            <div nz-col nzSpan="24">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-[var(--theme-text-main)] opacity-80 font-medium">Individual Expenses</span>
+                <button type="button" [disabled]="monthAlreadyExists && !editingMonthYear" class="bg-transparent border border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)] hover:text-black font-semibold text-xs rounded-lg px-3 py-1 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--theme-primary)]" (click)="showIndividualExpenseModal()">
+                  <span nz-icon nzType="plus"></span> Add Item
+                </button>
+              </div>
+              
+              <div *ngIf="individualExpenses.length === 0" class="text-center py-4 text-[var(--theme-text-muted)] text-xs border border-dashed border-[var(--theme-border)] rounded-xl">
+                No individual expenses added for this month yet.
+              </div>
+              
+              <div *ngIf="individualExpenses.length > 0" class="flex flex-col gap-2">
+                <div *ngFor="let item of individualExpenses; let i = index" class="flex items-center justify-between p-3 border border-[var(--theme-border)] rounded-xl bg-black/20">
+                  <div class="flex flex-col gap-1">
+                    <span class="text-[var(--theme-text-main)] font-semibold text-sm">{{ item.description }}</span>
+                    <div class="flex items-center gap-2 text-xs text-[var(--theme-text-muted)]">
+                      <span class="uppercase tracking-widest font-bold">{{ item.category }}</span>
+                      <span>•</span>
+                      <span [ngClass]="item.payment_status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'">{{ item.payment_status }}</span>
+                      <span *ngIf="item.files && item.files.length" class="text-[var(--theme-primary)] flex items-center gap-1 cursor-pointer hover:text-amber-300 transition-colors" (click)="viewIndividualAttachments(item)">
+                        <span nz-icon nzType="paper-clip"></span> {{ item.files.length }}
+                      </span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <span class="text-rose-500 font-bold">₹{{ item.amount | number }}</span>
+                    <div class="flex gap-1">
+                      <button type="button" class="text-amber-500 hover:text-amber-400 p-1 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="editIndividualExpense(i)"><span nz-icon nzType="edit"></span></button>
+                      <button type="button" class="text-rose-500 hover:text-rose-400 p-1 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="removeIndividualExpense(i)"><span nz-icon nzType="delete"></span></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Description (Common) -->
           <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
             <div nz-col nzSpan="24">
               <nz-form-item class="mb-1">
-                <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Description</nz-form-label>
+                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Description</nz-form-label>
                 <nz-form-control>
                   <input nz-input formControlName="description" placeholder="Optional details..." class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
                 </nz-form-control>
@@ -463,13 +512,14 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
           <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
             <div nz-col nzSpan="24">
               <nz-form-item class="mb-1">
-                <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Expense Receipts (Optional)</nz-form-label>
+                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Expense Receipts (Optional)</nz-form-label>
                 <nz-form-control>
                   <nz-upload
                     nzType="drag"
                     [nzMultiple]="true"
                     nzAccept="image/*,application/pdf"
                     [nzBeforeUpload]="beforeUpload"
+                    [nzPreview]="handlePreview"
                     [(nzFileList)]="fileList"
                     class="dark-theme-upload">
                     <p class="ant-upload-drag-icon">
@@ -482,6 +532,127 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
               </nz-form-item>
             </div>
           </div>
+        </form>
+      </ng-container>
+    </nz-modal>
+
+    <!-- Add Individual Expense Modal -->
+    <nz-modal [(nzVisible)]="isIndividualExpenseModalVisible" 
+              nzTitle="Add Individual Expense" 
+              (nzOnCancel)="handleIndividualExpenseCancel()" 
+              [nzFooter]="individualExpenseFooter"
+              [nzWidth]="600">
+      
+      <ng-template #individualExpenseFooter>
+        <div class="flex justify-end gap-3 px-4 py-3">
+          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleIndividualExpenseCancel()">
+            Cancel
+          </button>
+          <button nz-button [nzLoading]="isSavingStandalone" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="saveIndividualExpense()">
+            Save Item
+          </button>
+        </div>
+      </ng-template>
+
+      <ng-container *nzModalContent>
+        <form nz-form nzLayout="vertical" [formGroup]="individualExpenseForm" class="p-2">
+          <div *ngIf="isStandaloneIndividual" nz-row [nzGutter]="16" class="mb-3">
+            <div nz-col nzSpan="12">
+              <nz-form-item class="mb-0">
+                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Month</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="expense_month" class="w-full h-10 custom-dark-select">
+                    <nz-option [nzValue]="1" nzLabel="January"></nz-option>
+                    <nz-option [nzValue]="2" nzLabel="February"></nz-option>
+                    <nz-option [nzValue]="3" nzLabel="March"></nz-option>
+                    <nz-option [nzValue]="4" nzLabel="April"></nz-option>
+                    <nz-option [nzValue]="5" nzLabel="May"></nz-option>
+                    <nz-option [nzValue]="6" nzLabel="June"></nz-option>
+                    <nz-option [nzValue]="7" nzLabel="July"></nz-option>
+                    <nz-option [nzValue]="8" nzLabel="August"></nz-option>
+                    <nz-option [nzValue]="9" nzLabel="September"></nz-option>
+                    <nz-option [nzValue]="10" nzLabel="October"></nz-option>
+                    <nz-option [nzValue]="11" nzLabel="November"></nz-option>
+                    <nz-option [nzValue]="12" nzLabel="December"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col nzSpan="12">
+              <nz-form-item class="mb-0">
+                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Year</nz-form-label>
+                <nz-form-control>
+                  <nz-input-number formControlName="expense_year" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+
+          <nz-form-item class="mb-3">
+            <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Expense Name / Description</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter a description">
+              <input nz-input formControlName="description" placeholder="e.g. Plumber Repair" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <div nz-row [nzGutter]="16">
+            <div nz-col nzSpan="12">
+              <nz-form-item class="mb-3">
+                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Amount</nz-form-label>
+                <nz-form-control nzErrorTip="Required">
+                  <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
+                    <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
+                    <input type="number" nz-input formControlName="amount" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent transition-all" />
+                  </div>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+            <div nz-col nzSpan="12">
+              <nz-form-item class="mb-3">
+                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Category</nz-form-label>
+                <nz-form-control>
+                  <nz-select formControlName="category" class="w-full h-10 custom-dark-select">
+                    <nz-option nzValue="Utilities" nzLabel="Utilities"></nz-option>
+                    <nz-option nzValue="Salaries" nzLabel="Salaries"></nz-option>
+                    <nz-option nzValue="Maintenance" nzLabel="Maintenance"></nz-option>
+                    <nz-option nzValue="Consumables" nzLabel="Consumables"></nz-option>
+                    <nz-option nzValue="Marketing" nzLabel="Marketing"></nz-option>
+                    <nz-option nzValue="Other" nzLabel="Other"></nz-option>
+                  </nz-select>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+          
+          <nz-form-item class="mb-3">
+            <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Payment Status</nz-form-label>
+            <nz-form-control>
+              <nz-select formControlName="payment_status" class="w-full h-10 custom-dark-select">
+                <nz-option nzValue="Paid" nzLabel="Paid"></nz-option>
+                <nz-option nzValue="Pending" nzLabel="Pending"></nz-option>
+              </nz-select>
+            </nz-form-control>
+          </nz-form-item>
+
+          <!-- Individual Receipt Upload -->
+          <nz-form-item class="mb-0 mt-2 border-t border-[var(--theme-border)] pt-3">
+            <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Specific Receipt / Invoice (Optional)</nz-form-label>
+            <nz-form-control>
+              <nz-upload
+                nzType="drag"
+                [nzMultiple]="true"
+                nzAccept="image/*,application/pdf"
+                [nzBeforeUpload]="beforeIndividualUpload"
+                [nzPreview]="handlePreview"
+                [(nzFileList)]="individualFileList"
+                class="dark-theme-upload">
+                <p class="ant-upload-drag-icon">
+                  <span nz-icon nzType="camera" class="text-[var(--theme-primary)] text-2xl"></span>
+                </p>
+                <p class="ant-upload-text text-[var(--theme-text-main)] font-medium mt-1">Upload Receipt</p>
+              </nz-upload>
+            </nz-form-control>
+          </nz-form-item>
         </form>
       </ng-container>
     </nz-modal>
@@ -520,13 +691,7 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
             </div>
           </div>
           
-          <div class="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-start gap-3">
-            <span nz-icon nzType="info-circle" class="text-base mt-0.5"></span>
-            <div>
-              <strong class="block mb-1 text-red-300">Images showing broken?</strong>
-              This usually means your Supabase Storage Bucket is missing the correct Security Policies (RLS) to allow downloads. Make sure you have created the <b>"Allow authenticated selects"</b> policy for the <code>hotel-documents</code> bucket.
-            </div>
-          </div>
+
         </div>
       </ng-container>
     </nz-modal>
@@ -626,10 +791,44 @@ export class ExpensesComponent implements OnInit {
   // Modal State
   isModalVisible = false;
   isOkLoading = false;
+  monthAlreadyExists = false;
   expenseForm: FormGroup;
   editingMonthYear: { month: number, year: number } | null = null;
   fileList: NzUploadFile[] = [];
   isUploadingFiles = false;
+
+  checkDuplicateMonth(): void {
+    if (this.editingMonthYear) {
+      this.monthAlreadyExists = false;
+      return;
+    }
+
+    const month = this.expenseForm?.get('expense_month')?.value;
+    const year = this.expenseForm?.get('expense_year')?.value;
+
+    if (month && year && this.groupedExpenses) {
+      this.monthAlreadyExists = this.groupedExpenses.some(g => 
+        Number(g.expense_month) === Number(month) && 
+        Number(g.expense_year) === Number(year)
+      );
+
+      const controlsToToggle = ['payment_status', 'description', 'utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'];
+
+      if (this.monthAlreadyExists) {
+        controlsToToggle.forEach(c => this.expenseForm.get(c)?.disable({ emitEvent: false }));
+      } else {
+        controlsToToggle.forEach(c => this.expenseForm.get(c)?.enable({ emitEvent: false }));
+      }
+    }
+  }
+
+  // Individual Expense State
+  isIndividualExpenseModalVisible = false;
+  isStandaloneIndividual = false;
+  isSavingStandalone = false;
+  individualExpenseForm: FormGroup;
+  individualExpenses: any[] = [];
+  individualFileList: NzUploadFile[] = [];
 
   // Attachment Viewer State
   isAttachmentModalVisible = false;
@@ -646,6 +845,198 @@ export class ExpensesComponent implements OnInit {
     this.fileList = this.fileList.concat(file);
     return false;
   };
+
+  beforeIndividualUpload = (file: NzUploadFile): boolean => {
+    this.individualFileList = this.individualFileList.concat(file);
+    return false;
+  };
+
+  getBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  }
+
+  handlePreview = async (file: NzUploadFile): Promise<void> => {
+    let previewUrl = file.url || file['preview'];
+    
+    if (!previewUrl && file.originFileObj) {
+      previewUrl = await this.getBase64(file.originFileObj as File);
+      file['preview'] = previewUrl;
+    }
+    
+    if (previewUrl && typeof previewUrl === 'string') {
+      if (!previewUrl.startsWith('blob:') && !previewUrl.startsWith('data:')) {
+        try {
+          const signedUrl = await this.supabase.getSignedDocumentUrl(previewUrl);
+          if (signedUrl) {
+            window.open(signedUrl, '_blank');
+            return;
+          }
+        } catch (e) {
+          console.error('Failed to generate preview URL', e);
+          this.message.error('Failed to open file. The link might be expired or invalid.');
+          return;
+        }
+      } else {
+        // Local preview
+        window.open(previewUrl, '_blank');
+      }
+    }
+  };
+
+  async viewIndividualAttachments(item: any): Promise<void> {
+    if (item.files && item.files.length > 0) {
+      const dbPaths: string[] = [];
+      const localPaths: string[] = [];
+
+      for (const f of item.files) {
+        if (f.url && !f.url.startsWith('blob:') && !f.url.startsWith('data:')) {
+          dbPaths.push(f.url);
+        } else {
+          let previewUrl = f.url || (f as any)['preview'];
+          if (!previewUrl && f.originFileObj) {
+            previewUrl = await this.getBase64(f.originFileObj as File);
+            (f as any)['preview'] = previewUrl;
+          } else if (!previewUrl && (f instanceof File || f instanceof Blob)) {
+            previewUrl = await this.getBase64(f as File);
+            (f as any)['preview'] = previewUrl;
+          }
+          if (previewUrl) localPaths.push(previewUrl as string);
+        }
+      }
+
+      if (dbPaths.length > 0) {
+        this.viewAttachments(dbPaths);
+      }
+      
+      for (const local of localPaths) {
+        window.open(local, '_blank');
+      }
+    }
+  }
+
+
+
+  showIndividualExpenseModal(): void {
+    this.isStandaloneIndividual = false;
+    this.individualExpenseForm.reset({ payment_status: 'Paid', category: 'Maintenance' });
+    this.individualFileList = [];
+    this.isIndividualExpenseModalVisible = true;
+  }
+
+  showStandaloneIndividualExpenseModal(): void {
+    this.isStandaloneIndividual = true;
+    const currentDate = new Date();
+    let prevMonth = currentDate.getMonth();
+    let prevYear = currentDate.getFullYear();
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
+    this.individualExpenseForm.reset({ 
+      payment_status: 'Paid', 
+      category: 'Maintenance',
+      expense_month: prevMonth,
+      expense_year: prevYear
+    });
+    this.individualFileList = [];
+    this.isIndividualExpenseModalVisible = true;
+  }
+
+  handleIndividualExpenseCancel(): void {
+    this.isIndividualExpenseModalVisible = false;
+  }
+
+  async saveIndividualExpense(): Promise<void> {
+    if (this.individualExpenseForm.valid) {
+      const data = this.individualExpenseForm.value;
+      
+      if (this.isStandaloneIndividual) {
+        this.isSavingStandalone = true;
+        const profile = this.supabase.currentProfile;
+        const client = this.supabase.getClient();
+        
+        if (!profile || !profile.hotel_id) {
+          this.message.error('No hotel context found');
+          this.isSavingStandalone = false;
+          return;
+        }
+
+        const payload = {
+          hotel_id: profile.hotel_id,
+          expense_month: data.expense_month,
+          expense_year: data.expense_year,
+          category: data.category,
+          amount: data.amount,
+          payment_status: data.payment_status,
+          description: `INDIVIDUAL::${data.description}`
+        };
+
+        try {
+          const { data: insertedData, error } = await client.from('monthly_expenses').insert([payload]).select();
+          if (error) throw error;
+          
+          if (this.individualFileList.length > 0 && insertedData && insertedData.length > 0) {
+            const insertedRow = insertedData[0];
+            const indPaths: string[] = [];
+            let uploadCount = 0;
+            for (const file of this.individualFileList) {
+              if (!file.url || file.url.startsWith('blob:')) {
+                try {
+                  const actualFile = (file as any).originFileObj || file;
+                  const path = await this.supabase.uploadHotelDocument(actualFile, 'expenses', insertedRow.id);
+                  if (path) { indPaths.push(path); uploadCount++; }
+                } catch (e) {
+                  console.error('Failed to upload file', file.name, e);
+                }
+              }
+            }
+            if (indPaths.length > 0) {
+              await client.from('monthly_expenses').update({ receipts: indPaths }).eq('id', insertedRow.id);
+            }
+          }
+          this.message.success('Individual expense saved successfully!');
+          this.isIndividualExpenseModalVisible = false;
+          await this.loadExpenses();
+        } catch (e: any) {
+          this.message.error(e.message || 'Failed to save individual expense.');
+        } finally {
+          this.isSavingStandalone = false;
+        }
+      } else {
+        this.individualExpenses.push({
+          id: 'temp_' + Date.now(),
+          ...data,
+          files: [...this.individualFileList]
+        });
+        this.isIndividualExpenseModalVisible = false;
+        this.message.success('Individual expense added to pending list.');
+      }
+    } else {
+      Object.values(this.individualExpenseForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+    }
+  }
+
+  removeIndividualExpense(index: number): void {
+    this.individualExpenses.splice(index, 1);
+  }
+
+  editIndividualExpense(index: number): void {
+    const item = this.individualExpenses[index];
+    this.individualExpenseForm.patchValue(item);
+    this.individualFileList = item.files || [];
+    this.removeIndividualExpense(index);
+    this.isIndividualExpenseModalVisible = true;
+  }
 
   constructor(
     private supabase: SupabaseService,
@@ -671,6 +1062,15 @@ export class ExpensesComponent implements OnInit {
       consumables: [null, [Validators.min(0)]],
       marketing: [null, [Validators.min(0)]],
       other: [null, [Validators.min(0)]]
+    });
+
+    this.individualExpenseForm = this.fb.group({
+      description: ['', [Validators.required]],
+      category: ['Maintenance'],
+      amount: [null, [Validators.required, Validators.min(1)]],
+      payment_status: ['Paid'],
+      expense_month: [null],
+      expense_year: [null]
     });
 
     this.supabase.profile.subscribe(profile => {
@@ -801,6 +1201,8 @@ export class ExpensesComponent implements OnInit {
   }
 
   async ngOnInit() {
+    this.expenseForm.get('expense_month')?.valueChanges.subscribe(() => this.checkDuplicateMonth());
+    this.expenseForm.get('expense_year')?.valueChanges.subscribe(() => this.checkDuplicateMonth());
     await this.loadExpenses();
   }
 
@@ -830,7 +1232,7 @@ export class ExpensesComponent implements OnInit {
           expense_month: exp.expense_month,
           expense_year: exp.expense_year,
           payment_status: exp.payment_status,
-          description: exp.description || '',
+          description: '',
           utilities: 0,
           salaries: 0,
           maintenance: 0,
@@ -839,17 +1241,26 @@ export class ExpensesComponent implements OnInit {
           other: 0,
           total_amount: 0,
           ids: [],
-          receipts: []
+          receipts: [],
+          individual_items: []
         };
       }
       
       groups[key].ids.push(exp.id);
       
-      if (exp.receipts && Array.isArray(exp.receipts)) {
+      if (!groups[key].main_receipts) groups[key].main_receipts = [];
+
+      const isIndividual = exp.description && exp.description.startsWith('INDIVIDUAL::');
+      let cleanDesc = exp.description || '';
+
+      if (!isIndividual && exp.receipts && Array.isArray(exp.receipts)) {
         exp.receipts.forEach((r: string) => {
-          if (!groups[key].receipts.includes(r)) {
-            groups[key].receipts.push(r);
-          }
+          if (!groups[key].main_receipts.includes(r)) groups[key].main_receipts.push(r);
+          if (!groups[key].receipts.includes(r)) groups[key].receipts.push(r);
+        });
+      } else if (isIndividual && exp.receipts && Array.isArray(exp.receipts)) {
+        exp.receipts.forEach((r: string) => {
+          if (!groups[key].receipts.includes(r)) groups[key].receipts.push(r);
         });
       }
 
@@ -857,19 +1268,36 @@ export class ExpensesComponent implements OnInit {
         groups[key].payment_status = 'Pending';
       }
 
-      const catKey = exp.category.toLowerCase();
-      if (catKey === 'utilities') groups[key].utilities += exp.amount;
-      else if (catKey === 'salaries') groups[key].salaries += exp.amount;
-      else if (catKey === 'maintenance') groups[key].maintenance += exp.amount;
-      else if (catKey === 'consumables') groups[key].consumables += exp.amount;
-      else if (catKey === 'marketing') groups[key].marketing += exp.amount;
-      else if (catKey === 'other') groups[key].other += exp.amount;
+      if (isIndividual) {
+        cleanDesc = exp.description.replace('INDIVIDUAL::', '');
+        groups[key].individual_items.push({
+          description: cleanDesc,
+          category: exp.category,
+          amount: exp.amount,
+          payment_status: exp.payment_status,
+          files: exp.receipts && Array.isArray(exp.receipts) ? exp.receipts.map((r: string, idx: number) => {
+            const parts = r.split('/');
+            const name = parts[parts.length - 1] || `Receipt_${idx + 1}`;
+            return { uid: '-1-' + idx, url: r, name: name, status: 'done' };
+          }) : [],
+          id: exp.id
+        });
+      } else {
+        const catKey = exp.category.toLowerCase();
+        if (catKey === 'utilities') groups[key].utilities += exp.amount;
+        else if (catKey === 'salaries') groups[key].salaries += exp.amount;
+        else if (catKey === 'maintenance') groups[key].maintenance += exp.amount;
+        else if (catKey === 'consumables') groups[key].consumables += exp.amount;
+        else if (catKey === 'marketing') groups[key].marketing += exp.amount;
+        else if (catKey === 'other') groups[key].other += exp.amount;
+      }
 
       groups[key].total_amount += exp.amount;
-      if (exp.description && !groups[key].description.includes(exp.description)) {
+      
+      if (cleanDesc && !groups[key].description.includes(cleanDesc)) {
         groups[key].description = groups[key].description 
-          ? `${groups[key].description}, ${exp.description}` 
-          : exp.description;
+          ? `${groups[key].description}, ${cleanDesc}` 
+          : cleanDesc;
       }
     });
 
@@ -887,6 +1315,7 @@ export class ExpensesComponent implements OnInit {
   openAddModal(): void {
     this.editingMonthYear = null;
     this.fileList = [];
+    this.individualExpenses = [];
     const currentDate = new Date();
     let prevMonth = currentDate.getMonth();
     let prevYear = currentDate.getFullYear();
@@ -908,17 +1337,42 @@ export class ExpensesComponent implements OnInit {
     });
     this.expenseForm.get('expense_month')?.enable();
     this.expenseForm.get('expense_year')?.enable();
+    this.checkDuplicateMonth();
     this.isModalVisible = true;
   }
 
   openEditModal(data: any): void {
     this.editingMonthYear = { month: data.expense_month, year: data.expense_year };
-    this.fileList = [];
+    
+    // Load existing main receipts into the file uploader
+    this.fileList = data.main_receipts && Array.isArray(data.main_receipts) 
+      ? data.main_receipts.map((url: string, index: number) => {
+          const parts = url.split('/');
+          const name = parts[parts.length - 1] || `Receipt_${index + 1}`;
+          return {
+            uid: '-1-' + index,
+            name: name,
+            status: 'done',
+            url: url
+          };
+        })
+      : [];
+    // Deep clone the individual items to prevent mutating the table data before save
+    this.individualExpenses = data.individual_items ? JSON.parse(JSON.stringify(data.individual_items)) : [];
+    
+    // Filter out individual item descriptions from the main form description
+    let mainDesc = data.description || '';
+    if (data.individual_items && data.individual_items.length > 0) {
+      data.individual_items.forEach((item: any) => {
+        mainDesc = mainDesc.replace(item.description, '').replace(/,\s*,/g, ',').replace(/^,|,$/g, '').trim();
+      });
+    }
+
     this.expenseForm.reset({
       expense_month: data.expense_month,
       expense_year: data.expense_year,
       payment_status: data.payment_status,
-      description: data.description,
+      description: mainDesc,
       utilities: data.utilities || null,
       salaries: data.salaries || null,
       maintenance: data.maintenance || null,
@@ -926,6 +1380,7 @@ export class ExpensesComponent implements OnInit {
       marketing: data.marketing || null,
       other: data.other || null
     });
+    this.checkDuplicateMonth();
     this.isModalVisible = true;
   }
 
@@ -966,6 +1421,18 @@ export class ExpensesComponent implements OnInit {
           .eq('expense_year', this.editingMonthYear.year);
 
         if (deleteError) throw deleteError;
+      } else {
+        // Add Mode: Check if this month/year already exists
+        const monthExists = this.groupedExpenses.some(g => 
+          Number(g.expense_month) === Number(formData.expense_month) && 
+          Number(g.expense_year) === Number(formData.expense_year)
+        );
+
+        if (monthExists) {
+          this.message.error(`An expense record for ${this.getMonthName(formData.expense_month)} ${formData.expense_year} already exists. Please edit the existing entry instead.`);
+          this.isOkLoading = false;
+          return;
+        }
       }
 
       // Add mode validation & bulk save (inserts new non-zero categories)
@@ -994,51 +1461,106 @@ export class ExpensesComponent implements OnInit {
         }
       }
 
+      // Add Individual Expenses
+      for (const ind of this.individualExpenses) {
+        payloads.push({
+          hotel_id: profile.hotel_id,
+          expense_month: formData.expense_month,
+          expense_year: formData.expense_year,
+          category: ind.category,
+          amount: ind.amount,
+          payment_status: ind.payment_status,
+          description: `INDIVIDUAL::${ind.description}`
+        });
+      }
+
       if (payloads.length === 0) {
-        this.message.error('Please enter amount for at least one category.');
+        this.message.error('Please enter amount for at least one category or add an individual expense.');
         this.isOkLoading = false;
         return;
+      }
+
+      // If user uploaded main files, but there are no fixed categories, let's create a dummy "Other" category with amount 0 to hold the main receipts
+      const hasFixedCategories = payloads.some(p => !p.description || !p.description.startsWith('INDIVIDUAL::'));
+      if (!hasFixedCategories && this.fileList.length > 0) {
+        payloads.push({
+          hotel_id: profile.hotel_id,
+          expense_month: formData.expense_month,
+          expense_year: formData.expense_year,
+          category: 'Other',
+          amount: 0,
+          payment_status: formData.payment_status,
+          description: formData.description || 'General Attachments'
+        });
       }
 
       const { data: insertedData, error: insertError } = await client.from('monthly_expenses').insert(payloads).select();
       if (insertError) throw insertError;
 
       // Handle File Uploads
-      if (this.fileList.length > 0 && insertedData && insertedData.length > 0) {
+      if (insertedData && insertedData.length > 0) {
         this.isUploadingFiles = true;
         let uploadCount = 0;
-        const newPaths: string[] = [];
-        
-        // We will use the first inserted row's ID as the folder name for all receipts of this batch
         const batchRecordId = insertedData[0].id;
         
-        for (const file of this.fileList) {
-          if (!file.url && file as any) {
-            try {
-              const actualFile = (file as any).originFileObj || file;
-              const path = await this.supabase.uploadHotelDocument(actualFile, 'expenses', batchRecordId);
-              if (path) {
-                newPaths.push(path);
-                uploadCount++;
+        // 1. Upload Main Files (Fixed Categories)
+        const fixedRowIds = insertedData.filter((r: any) => !r.description || !r.description.startsWith('INDIVIDUAL::')).map((r: any) => r.id);
+        
+        if (this.fileList.length > 0 && fixedRowIds.length > 0) {
+          const mainPaths: string[] = [];
+          for (const file of this.fileList) {
+            if (!file.url || file.url.startsWith('blob:')) {
+              try {
+                const actualFile = (file as any).originFileObj || file;
+                const path = await this.supabase.uploadHotelDocument(actualFile, 'expenses', batchRecordId);
+                if (path) { mainPaths.push(path); uploadCount++; }
+              } catch (e) {
+                console.error('Failed to upload main file', file.name, e);
               }
-            } catch (e) {
-              console.error('Failed to upload file', file.name, e);
-              this.message.error(`Failed to upload ${file.name}`);
+            } else {
+              // Preserve existing URL
+              mainPaths.push(file.url);
+            }
+          }
+          if (mainPaths.length > 0) {
+            await client.from('monthly_expenses').update({ receipts: mainPaths }).in('id', fixedRowIds);
+          }
+        }
+
+        // 2. Upload Individual Files
+        for (const ind of this.individualExpenses) {
+          if (ind.files && ind.files.length > 0) {
+            // Match the inserted row by description and amount (we assume name+amount is unique enough per save batch)
+            const targetDesc = `INDIVIDUAL::${ind.description}`;
+            const insertedRow = insertedData.find((r: any) => r.description === targetDesc && Number(r.amount) === Number(ind.amount));
+            
+            if (insertedRow) {
+              const indPaths: string[] = [];
+              // Preserve existing URLs if editing
+              ind.files.forEach((f: any) => { 
+                if (f.url && !f.url.startsWith('blob:')) indPaths.push(f.url); 
+              });
+
+              for (const file of ind.files) {
+                if (!file.url || file.url.startsWith('blob:')) {
+                  try {
+                    const actualFile = file.originFileObj || file;
+                    const path = await this.supabase.uploadHotelDocument(actualFile, 'expenses', insertedRow.id);
+                    if (path) { indPaths.push(path); uploadCount++; }
+                  } catch (e) {
+                    console.error('Failed to upload individual file', file.name, e);
+                  }
+                }
+              }
+              if (indPaths.length > 0) {
+                await client.from('monthly_expenses').update({ receipts: indPaths }).eq('id', insertedRow.id);
+              }
             }
           }
         }
         
-        if (newPaths.length > 0) {
-          // Update ALL newly inserted rows with the receipt URLs
-          const rowIds = insertedData.map((row: any) => row.id);
-          const { error: updatePathsError } = await client
-            .from('monthly_expenses')
-            .update({ receipts: newPaths })
-            .in('id', rowIds);
-            
-          if (!updatePathsError) {
-            this.message.success(`Uploaded ${uploadCount} receipt(s) successfully.`);
-          }
+        if (uploadCount > 0) {
+          this.message.success(`Uploaded ${uploadCount} receipt(s) successfully.`);
         }
         this.isUploadingFiles = false;
       }

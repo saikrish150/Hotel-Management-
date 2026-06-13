@@ -150,6 +150,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         const initialDate = this.dailyEntryForm.get('entry_date')?.value || new Date();
         this.prepopulateFromBookings(initialDate);
       }
+      this.updateTitle(); // Update title when profile loads to apply hotel name
     });
 
     // Listen to changes on entry_date to pre-populate from bookings
@@ -284,12 +285,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   updateTitle() {
     const url = this.router.url;
+    const profile = this.supabaseService.currentProfile;
+    const hotelName = profile?.hotel_name || 'Room Bookings Ledger';
+
     if (url.includes('/dashboard') || url.includes('/analytics')) {
       this.activeTitle = 'Executive Analytics';
     } else if (url.includes('/daily-entries')) {
       this.activeTitle = 'Daily Log Entries';
     } else if (url.includes('/bookings')) {
-      this.activeTitle = 'Room Bookings Ledger';
+      this.activeTitle = hotelName;
     } else if (url.includes('/expenses')) {
       this.activeTitle = 'Monthly Expense Audit';
     } else if (url.includes('/reports')) {
