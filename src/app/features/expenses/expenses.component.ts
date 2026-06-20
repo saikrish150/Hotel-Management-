@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NzTableModule } from 'ng-zorro-antd/table';
 import { NzTagModule } from 'ng-zorro-antd/tag';
@@ -16,6 +16,9 @@ import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { ColumnConfig, DEFAULT_EXPENSE_COLUMNS } from '../../core/models/column-config.model';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NgApexchartsModule, ApexOptions } from 'ng-apexcharts';
+import { ThemeService } from '../../core/services/theme.service';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-expenses',
@@ -35,7 +38,8 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
     NzInputNumberModule,
     NzSelectModule,
     NzPopoverModule,
-    NzUploadModule
+    NzUploadModule,
+    NgApexchartsModule
   ],
   styles: [`
     ::ng-deep .ant-popover-inner {
@@ -53,667 +57,79 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
       border-color: var(--theme-border) !important;
     }
   `],
-  template: `
-    <div class="space-y-8 pb-10">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
-        <div>
-          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Monthly Expenses</h2>
-          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Operational Outflows & Ledger</p>
-        </div>
-        <div class="flex items-center gap-3">
-          <button class="bg-[var(--theme-card)] hover:bg-[var(--theme-border)]/50 border border-[var(--theme-border)] text-[var(--theme-text-main)] rounded-xl h-10 px-4 sm:px-6 text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer" 
-                  (click)="showStandaloneIndividualExpenseModal()">
-            <span nz-icon nzType="plus"></span> Add Item
-          </button>
-          <button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-4 sm:px-6 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2 cursor-pointer" 
-                  (click)="openAddModal()">
-            <span nz-icon nzType="plus"></span> Add Month
-          </button>
-        </div>
-      </div>
-
-      <!-- Dynamic Operational Outflow Stats -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- KPI Cards Grid -->
-        <div class="lg:col-span-2 grid grid-cols-2 gap-4">
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">YTD Cumulative Outflow</span>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">₹{{ totalOutflowYtd | number }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-red-500/5 blur-xl rounded-full"></div>
-          </div>
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Average Monthly Outflow</span>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">₹{{ averageMonthlyOutflow | number }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-500/5 blur-xl rounded-full"></div>
-          </div>
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Peak Outflow Period</span>
-            <h3 class="text-xl text-[var(--theme-text-main)] font-medium mt-4">{{ highestOutflowMonth }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-amber-500/5 blur-xl rounded-full"></div>
-          </div>
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Pending Liabilities</span>
-            <h3 class="text-3xl text-rose-500 font-medium mt-4">₹{{ pendingLiabilities | number }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-rose-500/5 blur-xl rounded-full"></div>
-          </div>
-        </div>
-
-        <!-- Expense Category Breakdown Block -->
-        <div class="glass-card p-5 flex flex-col justify-between">
-          <div class="mb-3">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase block">Expenditure Category Allocation</span>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-normal mt-0.5">YTD Cumulative percentage ratios by department</p>
-          </div>
-          <div class="space-y-2.5 flex-1 flex flex-col justify-center">
-            <div *ngFor="let item of expenseBreakdown" class="space-y-1">
-              <div class="flex justify-between text-[11px] font-semibold">
-                <span class="text-[var(--theme-text-muted)]">{{ item.name }}</span>
-                <span class="text-[var(--theme-text-main)]">{{ item.pct }}% <span class="text-[9px] text-[var(--theme-text-muted)] font-light">(₹{{ item.amount | number }})</span></span>
-              </div>
-              <div class="w-full h-1 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
-                <div class="h-full rounded-full" [style.background-color]="item.color" [style.width.%]="item.pct"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <div class="glass-card p-6">
-        <div class="flex flex-col gap-3 mb-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">Operational Ledger</span>
-            </div>
-            <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] text-xs flex items-center gap-1" (click)="resetExpenseFilters()">
-              <span nz-icon nzType="close"></span> Clear All Filters
-            </button>
-          </div>
-          <!-- Hidden Columns restore area -->
-          <div *ngIf="getHiddenColumns().length > 0" class="flex flex-wrap items-center gap-2 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl p-2.5">
-            <span class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider mr-1">Hidden Columns:</span>
-            <button *ngFor="let col of getHiddenColumns()" 
-                    (click)="toggleColumnVisibility(col.key, true)" 
-                    class="bg-[var(--theme-border)]/20 hover:bg-[var(--theme-border)]/40 text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] text-[10px] px-2.5 py-1 rounded-lg border border-[var(--theme-border)] transition-all flex items-center gap-1.5 cursor-pointer">
-              <span nz-icon nzType="plus" class="text-[8px]"></span>
-              <span>{{ col.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <nz-table #basicTable 
-                  [nzData]="filteredGroupedExpenses" 
-                  [nzFrontPagination]="true" 
-                  [nzPageSize]="10" 
-                  nzSize="middle" 
-                  [nzBordered]="false"
-                  [nzLoading]="loading"
-                  [nzScroll]="{ x: '1100px' }">
-          <thead>
-            <tr class="text-left border-b border-[var(--theme-border)]">
-              <ng-container *ngFor="let col of columns; let i = index">
-                <th *ngIf="col.visible" 
-                    class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none group relative" 
-                    [nzWidth]="col.width || null" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'">
-                  
-                  <div class="flex items-center gap-1.5" [class.justify-center]="col.align === 'center'" [class.justify-end]="col.align === 'right'">
-                    <!-- Reordering & Hide Controls on Hover -->
-                    <div class="hidden group-hover:flex items-center gap-0.5 mr-1 text-[10px] text-[var(--theme-text-muted)] bg-[var(--theme-card)] backdrop-blur rounded-lg px-1.5 py-1 border border-[var(--theme-border)] absolute -top-8 left-1/2 -translate-x-1/2 z-10 shadow-lg">
-                      <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0" 
-                              [disabled]="i === 0" (click)="moveColumn(i, 'left'); $event.stopPropagation()">
-                        <span nz-icon nzType="left" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-0.5" 
-                              [disabled]="i === columns.length - 1" (click)="moveColumn(i, 'right'); $event.stopPropagation()">
-                        <span nz-icon nzType="right" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-rose-400 hover:text-rose-300 p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-1 border-l border-[var(--theme-border)] pl-1" 
-                              (click)="toggleColumnVisibility(col.key, false); $event.stopPropagation()">
-                        <span nz-icon nzType="close" class="text-[9px]"></span>
-                      </button>
-                    </div>
-
-                    <span>{{ col.label }}</span>
-
-                    <!-- Conditional Column Header popover filters -->
-                    <ng-container [ngSwitch]="col.key">
-                      <span *ngSwitchCase="'month_year'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="expenseFilterYear || expenseFilterMonth"
-                            nz-popover [nzPopoverContent]="expenseDateFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'payment_status'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="expenseFilterStatus"
-                            nz-popover [nzPopoverContent]="expenseStatusFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'total_amount'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="expenseMinAmount"
-                            nz-popover [nzPopoverContent]="expenseAmountFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                    </ng-container>
-                  </div>
-                </th>
-              </ng-container>
-              <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none text-right" nzWidth="100px">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody class="text-sm">
-            <tr *ngFor="let data of basicTable.data" class="border-b border-[var(--theme-border)] transition-colors">
-              <ng-container *ngFor="let col of columns">
-                <td *ngIf="col.visible" 
-                    class="py-4 text-xs bg-transparent border-none font-light" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'"
-                    [class.font-semibold]="col.key === 'month_year' || col.key === 'total_amount'"
-                    [class.text-[var(--theme-text-main)]]="col.key === 'month_year' || (col.key !== 'payment_status' && col.key !== 'total_amount')"
-                    [class.uppercase]="col.key === 'month_year'"
-                    [class.tracking-wider]="col.key === 'month_year'">
-                  
-                  <ng-container [ngSwitch]="col.key">
-                    <span *ngSwitchCase="'month_year'">{{ getMonthName(data.expense_month) }} / {{ data.expense_year }}</span>
-                    <ng-container *ngSwitchCase="'payment_status'">
-                      <span class="px-3 py-1.5 rounded-xl text-[9px] uppercase tracking-widest font-semibold animate-pulse"
-                        [ngClass]="data.payment_status === 'Paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15' : 'bg-amber-500/10 text-amber-400 border border-amber-500/15'">
-                        {{ data.payment_status }}
-                      </span>
-                    </ng-container>
-
-                    <ng-container *ngSwitchCase="'receipts'">
-                      <button *ngIf="data.receipts?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:!text-amber-300 hover:!bg-transparent focus:!text-amber-300 focus:!bg-transparent active:!bg-transparent text-xs font-semibold px-2 flex items-center justify-center m-auto transition-colors" (click)="viewAttachments(data.receipts)">
-                        View ({{data.receipts.length}})
-                      </button>
-                      <span *ngIf="!data.receipts?.length" class="text-[var(--theme-text-muted)] flex justify-center">-</span>
-                    </ng-container>
-
-                    <span *ngSwitchCase="'total_amount'" class="text-rose-500">₹{{ data.total_amount | number }}</span>
-                    <!-- Numerical columns -->
-                    <span *ngSwitchDefault>{{ data[col.key] ? '₹' + (data[col.key] | number) : '-' }}</span>
-                  </ng-container>
-
-                </td>
-              </ng-container>
-              <td class="py-4 bg-transparent border-none text-right">
-                <button type="button" class="text-amber-500 hover:text-amber-400 transition-colors p-0 mr-4 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="openEditModal(data)">
-                  <span nz-icon nzType="edit" class="text-base"></span>
-                </button>
-                <button type="button" class="text-rose-500 hover:text-rose-400 transition-colors p-0 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" nz-popconfirm nzPopconfirmTitle="Are you sure to delete all expenses for this month?" (nzOnConfirm)="deleteExpenseGroup(data)">
-                  <span nz-icon nzType="delete" class="text-base"></span>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="filteredGroupedExpenses.length === 0">
-              <td [attr.colspan]="getVisibleColumnsCount() + 1" class="text-center py-8 text-[var(--theme-text-muted)] bg-transparent border-none">
-                No expenses matches the active filters.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      </div>
-
-      <!-- Popover Content Templates -->
-      <ng-template #expenseDateFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Month/Year</span>
-          </div>
-          <div class="mb-3">
-            <label class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider block mb-1">Operating Year</label>
-            <nz-select [(ngModel)]="expenseFilterYear" class="w-full h-10 custom-dark-select" nzPlaceHolder="All Years">
-              <nz-option [nzValue]="null" nzLabel="All Years"></nz-option>
-              <nz-option [nzValue]="2025" nzLabel="2025"></nz-option>
-              <nz-option [nzValue]="2026" nzLabel="2026"></nz-option>
-              <nz-option [nzValue]="2027" nzLabel="2027"></nz-option>
-            </nz-select>
-          </div>
-          <div class="mb-4">
-            <label class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider block mb-1">Month</label>
-            <nz-select [(ngModel)]="expenseFilterMonth" class="w-full h-10 custom-dark-select" nzPlaceHolder="All Months">
-              <nz-option [nzValue]="null" nzLabel="All Months"></nz-option>
-              <nz-option *ngFor="let m of [1,2,3,4,5,6,7,8,9,10,11,12]" [nzValue]="m" [nzLabel]="getMonthName(m)"></nz-option>
-            </nz-select>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="expenseFilterYear = null; expenseFilterMonth = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #expenseStatusFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Payment Status</span>
-          </div>
-          <div class="mb-4">
-            <nz-select [(ngModel)]="expenseFilterStatus" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Status">
-              <nz-option nzValue="" nzLabel="All Statuses"></nz-option>
-              <nz-option nzValue="Paid" nzLabel="Paid"></nz-option>
-              <nz-option nzValue="Pending" nzLabel="Pending"></nz-option>
-            </nz-select>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="expenseFilterStatus = ''">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #expenseAmountFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Min Total Outflow</span>
-          </div>
-          <div class="mb-4">
-            <nz-input-number [(ngModel)]="expenseMinAmount" [nzMin]="0" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" placeholder="e.g. 10000"></nz-input-number>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="expenseMinAmount = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-    </div>
-
-    <!-- Add/Edit Modal -->
-    <nz-modal [(nzVisible)]="isModalVisible" 
-              [nzTitle]="modalTitle" 
-              (nzOnCancel)="handleCancel()" 
-              [nzFooter]="modalFooter"
-              [nzWidth]="900">
-      
-      <ng-template #modalTitle>
-        <div class="flex items-center gap-3">
-          <span nz-icon [nzType]="editingMonthYear ? 'edit' : 'plus-circle'" class="text-lg" [style.color]="'var(--theme-primary)'"></span>
-          <span class="text-[var(--theme-text-main)] font-semibold uppercase tracking-wider text-xs" style="font-family: 'Hanken Grotesk', sans-serif;">
-            {{ editingMonthYear ? 'Edit Expense Record' : 'Add New Expense' }}
-          </span>
-        </div>
-      </ng-template>
-
-      <ng-template #modalFooter>
-        <div class="flex justify-end gap-3 px-4 py-3">
-          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleCancel()">
-            Cancel
-          </button>
-          <button nz-button [nzLoading]="isOkLoading" [disabled]="monthAlreadyExists && !editingMonthYear" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all disabled:opacity-50 disabled:cursor-not-allowed" (click)="handleOk()">
-            {{ editingMonthYear ? 'Save Changes' : 'Add Expense' }}
-          </button>
-        </div>
-      </ng-template>
-
-      <ng-container *nzModalContent>
-        <form nz-form nzLayout="vertical" [formGroup]="expenseForm" class="p-2">
-          <div *ngIf="monthAlreadyExists && !editingMonthYear" class="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 flex items-center gap-2">
-            <span nz-icon nzType="warning" class="text-base"></span>
-            <span>An expense record for this month already exists. Please edit it from the main table instead.</span>
-          </div>
-          <div nz-row [nzGutter]="[16, 12]">
-            <ng-container *ngFor="let field of popupFields">
-              <div *ngIf="field.visible && field.key !== 'total_amount'" nz-col nzXs="24" [nzSm]="field.key === 'month_year' ? 16 : 8">
-                <ng-container [ngSwitch]="field.key">
-                  
-                  <!-- Month & Year -->
-                  <div *ngSwitchCase="'month_year'" nz-row [nzGutter]="16">
-                    <div nz-col nzSpan="12">
-                      <nz-form-item class="mb-0">
-                        <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Month</nz-form-label>
-                        <nz-form-control nzErrorTip="Please select month">
-                          <nz-select formControlName="expense_month" class="w-full h-10 custom-dark-select">
-                            <nz-option [nzValue]="1" nzLabel="January"></nz-option>
-                            <nz-option [nzValue]="2" nzLabel="February"></nz-option>
-                            <nz-option [nzValue]="3" nzLabel="March"></nz-option>
-                            <nz-option [nzValue]="4" nzLabel="April"></nz-option>
-                            <nz-option [nzValue]="5" nzLabel="May"></nz-option>
-                            <nz-option [nzValue]="6" nzLabel="June"></nz-option>
-                            <nz-option [nzValue]="7" nzLabel="July"></nz-option>
-                            <nz-option [nzValue]="8" nzLabel="August"></nz-option>
-                            <nz-option [nzValue]="9" nzLabel="September"></nz-option>
-                            <nz-option [nzValue]="10" nzLabel="October"></nz-option>
-                            <nz-option [nzValue]="11" nzLabel="November"></nz-option>
-                            <nz-option [nzValue]="12" nzLabel="December"></nz-option>
-                          </nz-select>
-                        </nz-form-control>
-                      </nz-form-item>
-                    </div>
-                    <div nz-col nzSpan="12">
-                      <nz-form-item class="mb-0">
-                        <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Year</nz-form-label>
-                        <nz-form-control nzErrorTip="Please input year">
-                          <nz-input-number formControlName="expense_year" [nzMin]="2000" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                        </nz-form-control>
-                      </nz-form-item>
-                    </div>
-                  </div>
-
-                  <!-- Payment Status -->
-                  <nz-form-item *ngSwitchCase="'payment_status'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Payment Status</nz-form-label>
-                    <nz-form-control>
-                      <nz-select formControlName="payment_status" class="w-full h-10 custom-dark-select">
-                        <nz-option nzValue="Paid" nzLabel="Paid"></nz-option>
-                        <nz-option nzValue="Pending" nzLabel="Pending"></nz-option>
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Utilities -->
-                  <nz-form-item *ngSwitchCase="'utilities'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Utilities (Elec/Water)</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="utilities" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                  <!-- Salaries -->
-                  <nz-form-item *ngSwitchCase="'salaries'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Salaries & Wages</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="salaries" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                  <!-- Maintenance -->
-                  <nz-form-item *ngSwitchCase="'maintenance'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Repairs & Maint</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="maintenance" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                  <!-- Consumables -->
-                  <nz-form-item *ngSwitchCase="'consumables'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Consumables</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="consumables" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                  <!-- Marketing -->
-                  <nz-form-item *ngSwitchCase="'marketing'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Marketing / OTA</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="marketing" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                  <!-- Other -->
-                  <nz-form-item *ngSwitchCase="'other'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Other Expenses</nz-form-label>
-                      <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                        <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                        <input type="number" nz-input formControlName="other" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                      </div>
-                  </nz-form-item>
-
-                </ng-container>
-              </div>
-            </ng-container>
-          </div>
-
-          <!-- Individual Expenses Section -->
-          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
-            <div nz-col nzSpan="24">
-              <div class="flex items-center justify-between mb-3">
-                <span class="text-[var(--theme-text-main)] opacity-80 font-medium">Individual Expenses</span>
-                <button type="button" [disabled]="monthAlreadyExists && !editingMonthYear" class="bg-transparent border border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)] hover:text-black font-semibold text-xs rounded-lg px-3 py-1 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--theme-primary)]" (click)="showIndividualExpenseModal()">
-                  <span nz-icon nzType="plus"></span> Add Item
-                </button>
-              </div>
-              
-              <div *ngIf="individualExpenses.length === 0" class="text-center py-4 text-[var(--theme-text-muted)] text-xs border border-dashed border-[var(--theme-border)] rounded-xl">
-                No individual expenses added for this month yet.
-              </div>
-              
-              <div *ngIf="individualExpenses.length > 0" class="flex flex-col gap-2">
-                <div *ngFor="let item of individualExpenses; let i = index" class="flex items-center justify-between p-3 border border-[var(--theme-border)] rounded-xl bg-black/20">
-                  <div class="flex flex-col gap-1">
-                    <span class="text-[var(--theme-text-main)] font-semibold text-sm">{{ item.description }}</span>
-                    <div class="flex items-center gap-2 text-xs text-[var(--theme-text-muted)]">
-                      <span class="uppercase tracking-widest font-bold">{{ item.category }}</span>
-                      <span>•</span>
-                      <span [ngClass]="item.payment_status === 'Paid' ? 'text-emerald-400' : 'text-amber-400'">{{ item.payment_status }}</span>
-                      <span *ngIf="item.files && item.files.length" class="text-[var(--theme-primary)] flex items-center gap-1 cursor-pointer hover:text-amber-300 transition-colors" (click)="viewIndividualAttachments(item)">
-                        <span nz-icon nzType="paper-clip"></span> {{ item.files.length }}
-                      </span>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4">
-                    <span class="text-rose-500 font-bold">₹{{ item.amount | number }}</span>
-                    <div class="flex gap-1">
-                      <button type="button" class="text-amber-500 hover:text-amber-400 p-1 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="editIndividualExpense(i)"><span nz-icon nzType="edit"></span></button>
-                      <button type="button" class="text-rose-500 hover:text-rose-400 p-1 bg-transparent border-none cursor-pointer outline-none focus:outline-none hover:bg-transparent active:bg-transparent" (click)="removeIndividualExpense(i)"><span nz-icon nzType="delete"></span></button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Description (Common) -->
-          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
-            <div nz-col nzSpan="24">
-              <nz-form-item class="mb-1">
-                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Description</nz-form-label>
-                <nz-form-control>
-                  <input nz-input formControlName="description" placeholder="Optional details..." class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-
-          <!-- Receipts Upload -->
-          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
-            <div nz-col nzSpan="24">
-              <nz-form-item class="mb-1">
-                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Expense Receipts (Optional)</nz-form-label>
-                <nz-form-control>
-                  <nz-upload
-                    nzType="drag"
-                    [nzMultiple]="true"
-                    nzAccept="image/*,application/pdf"
-                    [nzBeforeUpload]="beforeUpload"
-                    [nzPreview]="handlePreview"
-                    [(nzFileList)]="fileList"
-                    class="dark-theme-upload">
-                    <p class="ant-upload-drag-icon">
-                      <span nz-icon nzType="camera" class="text-[var(--theme-primary)] text-3xl"></span>
-                    </p>
-                    <p class="ant-upload-text text-[var(--theme-text-main)] font-medium mt-2">Tap to Take Photo or Upload</p>
-                    <p class="ant-upload-hint text-[var(--theme-text-muted)] text-xs mt-1">Supports camera capture, images, and PDFs.</p>
-                  </nz-upload>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-        </form>
-      </ng-container>
-    </nz-modal>
-
-    <!-- Add Individual Expense Modal -->
-    <nz-modal [(nzVisible)]="isIndividualExpenseModalVisible" 
-              nzTitle="Add Individual Expense" 
-              (nzOnCancel)="handleIndividualExpenseCancel()" 
-              [nzFooter]="individualExpenseFooter"
-              [nzWidth]="600">
-      
-      <ng-template #individualExpenseFooter>
-        <div class="flex justify-end gap-3 px-4 py-3">
-          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleIndividualExpenseCancel()">
-            Cancel
-          </button>
-          <button nz-button [nzLoading]="isSavingStandalone" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="saveIndividualExpense()">
-            Save Item
-          </button>
-        </div>
-      </ng-template>
-
-      <ng-container *nzModalContent>
-        <form nz-form nzLayout="vertical" [formGroup]="individualExpenseForm" class="p-2">
-          <div *ngIf="isStandaloneIndividual" nz-row [nzGutter]="16" class="mb-3">
-            <div nz-col nzSpan="12">
-              <nz-form-item class="mb-0">
-                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Month</nz-form-label>
-                <nz-form-control>
-                  <nz-select formControlName="expense_month" class="w-full h-10 custom-dark-select">
-                    <nz-option [nzValue]="1" nzLabel="January"></nz-option>
-                    <nz-option [nzValue]="2" nzLabel="February"></nz-option>
-                    <nz-option [nzValue]="3" nzLabel="March"></nz-option>
-                    <nz-option [nzValue]="4" nzLabel="April"></nz-option>
-                    <nz-option [nzValue]="5" nzLabel="May"></nz-option>
-                    <nz-option [nzValue]="6" nzLabel="June"></nz-option>
-                    <nz-option [nzValue]="7" nzLabel="July"></nz-option>
-                    <nz-option [nzValue]="8" nzLabel="August"></nz-option>
-                    <nz-option [nzValue]="9" nzLabel="September"></nz-option>
-                    <nz-option [nzValue]="10" nzLabel="October"></nz-option>
-                    <nz-option [nzValue]="11" nzLabel="November"></nz-option>
-                    <nz-option [nzValue]="12" nzLabel="December"></nz-option>
-                  </nz-select>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col nzSpan="12">
-              <nz-form-item class="mb-0">
-                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Year</nz-form-label>
-                <nz-form-control>
-                  <nz-input-number formControlName="expense_year" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-
-          <nz-form-item class="mb-3">
-            <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Expense Name / Description</nz-form-label>
-            <nz-form-control nzErrorTip="Please enter a description">
-              <input nz-input formControlName="description" placeholder="e.g. Plumber Repair" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-            </nz-form-control>
-          </nz-form-item>
-
-          <div nz-row [nzGutter]="16">
-            <div nz-col nzSpan="12">
-              <nz-form-item class="mb-3">
-                <nz-form-label nzRequired class="text-[var(--theme-text-main)] opacity-80 font-medium">Amount</nz-form-label>
-                <nz-form-control nzErrorTip="Required">
-                  <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                    <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                    <input type="number" nz-input formControlName="amount" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent transition-all" />
-                  </div>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-            <div nz-col nzSpan="12">
-              <nz-form-item class="mb-3">
-                <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Category</nz-form-label>
-                <nz-form-control>
-                  <nz-select formControlName="category" class="w-full h-10 custom-dark-select">
-                    <nz-option nzValue="Utilities" nzLabel="Utilities"></nz-option>
-                    <nz-option nzValue="Salaries" nzLabel="Salaries"></nz-option>
-                    <nz-option nzValue="Maintenance" nzLabel="Maintenance"></nz-option>
-                    <nz-option nzValue="Consumables" nzLabel="Consumables"></nz-option>
-                    <nz-option nzValue="Marketing" nzLabel="Marketing"></nz-option>
-                    <nz-option nzValue="Other" nzLabel="Other"></nz-option>
-                  </nz-select>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-          
-          <nz-form-item class="mb-3">
-            <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Payment Status</nz-form-label>
-            <nz-form-control>
-              <nz-select formControlName="payment_status" class="w-full h-10 custom-dark-select">
-                <nz-option nzValue="Paid" nzLabel="Paid"></nz-option>
-                <nz-option nzValue="Pending" nzLabel="Pending"></nz-option>
-              </nz-select>
-            </nz-form-control>
-          </nz-form-item>
-
-          <!-- Individual Receipt Upload -->
-          <nz-form-item class="mb-0 mt-2 border-t border-[var(--theme-border)] pt-3">
-            <nz-form-label class="text-[var(--theme-text-main)] opacity-80 font-medium">Specific Receipt / Invoice (Optional)</nz-form-label>
-            <nz-form-control>
-              <nz-upload
-                nzType="drag"
-                [nzMultiple]="true"
-                nzAccept="image/*,application/pdf"
-                [nzBeforeUpload]="beforeIndividualUpload"
-                [nzPreview]="handlePreview"
-                [(nzFileList)]="individualFileList"
-                class="dark-theme-upload">
-                <p class="ant-upload-drag-icon">
-                  <span nz-icon nzType="camera" class="text-[var(--theme-primary)] text-2xl"></span>
-                </p>
-                <p class="ant-upload-text text-[var(--theme-text-main)] font-medium mt-1">Upload Receipt</p>
-              </nz-upload>
-            </nz-form-control>
-          </nz-form-item>
-        </form>
-      </ng-container>
-    </nz-modal>
-
-    <!-- Attachments Viewer Modal -->
-    <nz-modal [(nzVisible)]="isAttachmentModalVisible" 
-              nzTitle="View Attachments" 
-              (nzOnCancel)="isAttachmentModalVisible = false" 
-              [nzFooter]="null"
-              [nzWidth]="800">
-      <ng-container *nzModalContent>
-        <div class="flex flex-col gap-4">
-          <div *ngIf="isLoadingAttachments" class="flex justify-center p-8">
-            <span nz-icon nzType="loading" nzTheme="outline" class="text-4xl text-[var(--theme-primary)]"></span>
-          </div>
-          <div *ngIf="!isLoadingAttachments && attachmentUrls.length === 0" class="text-center text-[var(--theme-text-muted)] p-8">
-            No valid attachments found or links expired.
-          </div>
-          <div *ngIf="!isLoadingAttachments && attachmentUrls.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-            <div *ngFor="let url of attachmentUrls" class="border border-[var(--theme-border)] rounded-xl overflow-hidden bg-black/40 flex flex-col items-center justify-center p-4 relative group min-h-[200px]">
-               
-               <!-- File Preview (Image) -->
-               <img *ngIf="!url.includes('.pdf')" [src]="url" class="max-w-full max-h-[300px] object-contain rounded-lg transition-transform duration-300 group-hover:scale-105" alt="Attachment" (error)="onImageError($event)" />
-               
-               <!-- File Preview (PDF) -->
-               <div *ngIf="url.includes('.pdf')" class="flex flex-col items-center justify-center h-[200px] w-full bg-zinc-900/50 rounded-lg">
-                 <span nz-icon nzType="file-pdf" class="text-6xl text-rose-500 mb-3"></span>
-                 <span class="text-sm font-semibold text-[var(--theme-text-main)]">PDF Document</span>
-               </div>
-
-               <!-- Download / View Link Overlay -->
-               <a [href]="url" target="_blank" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col gap-2 items-center justify-center transition-opacity text-white hover:text-[var(--theme-primary)]">
-                 <span nz-icon nzType="eye" class="text-3xl mb-1"></span>
-                 <span class="text-xs font-bold uppercase tracking-widest bg-black/50 px-3 py-1 rounded-full border border-white/20">Click to Open</span>
-               </a>
-            </div>
-          </div>
-          
-
-        </div>
-      </ng-container>
-    </nz-modal>
-  `
+  templateUrl: './expenses.component.html'
 })
-export class ExpensesComponent implements OnInit {
+export class ExpensesComponent implements OnInit, OnDestroy {
   expenses: any[] = [];
   groupedExpenses: any[] = [];
   loading = true;
+  totalRevenueYtd = 0;
+  categoryPercentages: Array<{ name: string; amount: number; percentage: number; color: string }> = [];
 
   columns: ColumnConfig[] = [...DEFAULT_EXPENSE_COLUMNS];
   popupFields: ColumnConfig[] = [...DEFAULT_EXPENSE_COLUMNS];
+
+  // Chart properties
+  public fixedVsVariableChartOptions: Partial<ApexOptions> | null = null;
+  public clearanceChartOptions: Partial<ApexOptions> | null = null;
+  
+  chartTheme: 'dark' | 'light' = 'dark';
+  primaryColor = '#d4af37';
+  private themeSubscription?: Subscription;
 
   // Computed statistics
   get totalOutflowYtd(): number {
     return this.filteredGroupedExpenses.reduce((sum, e) => sum + Number(e.total_amount || 0), 0);
   }
 
-  get highestOutflowMonth(): string {
-    if (this.filteredGroupedExpenses.length === 0) return 'N/A';
-    const highest = [...this.filteredGroupedExpenses].sort((a, b) => Number(b.total_amount || 0) - Number(a.total_amount || 0))[0];
-    return `${this.getMonthName(highest.expense_month)} ${highest.expense_year}`;
+  get previousMonthExpense(): number {
+    if (this.groupedExpenses.length === 0) return 0;
+    const sorted = [...this.groupedExpenses].sort((a, b) => {
+      if (b.expense_year !== a.expense_year) return b.expense_year - a.expense_year;
+      return b.expense_month - a.expense_month;
+    });
+    return sorted[0] ? Number(sorted[0].total_amount || 0) : 0;
+  }
+
+  get previousMonthLabel(): string {
+    if (this.groupedExpenses.length === 0) return 'Prev Month';
+    const sorted = [...this.groupedExpenses].sort((a, b) => {
+      if (b.expense_year !== a.expense_year) return b.expense_year - a.expense_year;
+      return b.expense_month - a.expense_month;
+    });
+    const item = sorted[0];
+    if (!item) return 'Prev Month';
+    return `Prev Month (${this.getMonthName(item.expense_month)} ${item.expense_year})`;
+  }
+
+  get clearanceRateText(): string {
+    const total = this.totalOutflowYtd;
+    const pending = this.pendingLiabilities;
+    const paid = total > pending ? total - pending : 0;
+    return total > 0 ? Math.round((paid / total) * 100) + '% clearance' : '100% clearance';
+  }
+
+  get breakEvenOccupancyRate(): number {
+    const expenses = this.totalOutflowYtd;
+    if (expenses === 0 || this.totalRevenueYtd === 0) return 0;
+    // Derive ADR from real revenue data
+    const profile = this.supabase.currentProfile;
+    const roomConfig = profile?.room_config || {};
+    let totalRooms = 0;
+    Object.keys(roomConfig).forEach(key => {
+      if (key !== '_order') {
+        const val = roomConfig[key];
+        totalRooms += Array.isArray(val) ? val.length : Number(val || 0);
+      }
+    });
+    if (totalRooms === 0) totalRooms = 1; // Prevent division by zero
+    const activeMonths = this.filteredGroupedExpenses.length || 1;
+    const totalAvailableRoomNights = totalRooms * 30.4 * activeMonths;
+    const adr = totalAvailableRoomNights > 0 ? this.totalRevenueYtd / totalAvailableRoomNights : 0;
+    if (adr === 0) return 0;
+    const roomsToSell = expenses / adr;
+    const pct = (roomsToSell / totalAvailableRoomNights) * 100;
+    return Math.min(100, Math.round(pct * 10) / 10);
   }
 
   get averageMonthlyOutflow(): number {
@@ -755,8 +171,12 @@ export class ExpensesComponent implements OnInit {
   expenseFilterStatus = '';
   expenseMinAmount: number | null = null;
 
+  sortColumn = 'month_year';
+  sortDirection = 'desc';
+  isMandatoryCheckEnabled = false;
+
   get filteredGroupedExpenses(): any[] {
-    return this.groupedExpenses.filter(e => {
+    const list = this.groupedExpenses.filter(e => {
       let matchesYear = true;
       if (this.expenseFilterYear !== null && this.expenseFilterYear !== undefined) {
         matchesYear = e.expense_year === this.expenseFilterYear;
@@ -779,6 +199,32 @@ export class ExpensesComponent implements OnInit {
 
       return matchesYear && matchesMonth && matchesStatus && matchesAmount;
     });
+
+    const sortCol = this.sortColumn || 'month_year';
+    const sortDir = this.sortDirection || 'desc';
+
+    return list.sort((a, b) => {
+      if (sortCol === 'month_year') {
+        const timeA = (a.expense_year || 0) * 12 + (a.expense_month || 0);
+        const timeB = (b.expense_year || 0) * 12 + (b.expense_month || 0);
+        return sortDir === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      let valA = a[sortCol];
+      let valB = b[sortCol];
+
+      if (['total_amount', 'utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'].includes(sortCol)) {
+        const numA = Number(valA || 0);
+        const numB = Number(valB || 0);
+        return sortDir === 'asc' ? numA - numB : numB - numA;
+      }
+
+      const strA = String(valA || '').toLowerCase();
+      const strB = String(valB || '').toLowerCase();
+      if (strA < strB) return sortDir === 'asc' ? -1 : 1;
+      if (strA > strB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
   }
 
   resetExpenseFilters(): void {
@@ -786,6 +232,7 @@ export class ExpensesComponent implements OnInit {
     this.expenseFilterMonth = null;
     this.expenseFilterStatus = '';
     this.expenseMinAmount = null;
+    this.updateCharts();
   }
 
   // Modal State
@@ -796,10 +243,10 @@ export class ExpensesComponent implements OnInit {
   editingMonthYear: { month: number, year: number } | null = null;
   fileList: NzUploadFile[] = [];
   isUploadingFiles = false;
+  private isApplyingExpenseRecord = false;
 
   checkDuplicateMonth(): void {
-    if (this.editingMonthYear) {
-      this.monthAlreadyExists = false;
+    if (this.isApplyingExpenseRecord) {
       return;
     }
 
@@ -807,19 +254,69 @@ export class ExpensesComponent implements OnInit {
     const year = this.expenseForm?.get('expense_year')?.value;
 
     if (month && year && this.groupedExpenses) {
-      this.monthAlreadyExists = this.groupedExpenses.some(g => 
+      const existingExpense = this.groupedExpenses.find(g => 
         Number(g.expense_month) === Number(month) && 
         Number(g.expense_year) === Number(year)
       );
 
-      const controlsToToggle = ['payment_status', 'description', 'utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'];
+      if (existingExpense) {
+        const isCurrentEditingRecord = this.editingMonthYear &&
+          Number(this.editingMonthYear.month) === Number(month) &&
+          Number(this.editingMonthYear.year) === Number(year);
 
-      if (this.monthAlreadyExists) {
-        controlsToToggle.forEach(c => this.expenseForm.get(c)?.disable({ emitEvent: false }));
-      } else {
-        controlsToToggle.forEach(c => this.expenseForm.get(c)?.enable({ emitEvent: false }));
+        this.monthAlreadyExists = false;
+        this.setMonthlyExpenseFieldsEnabled(true);
+
+        if (!isCurrentEditingRecord) {
+          this.openEditModal(existingExpense);
+        }
+        return;
+      }
+
+      if (this.editingMonthYear) {
+        this.openBlankExpenseRecord(month, year);
+        return;
       }
     }
+
+    this.monthAlreadyExists = false;
+    this.setMonthlyExpenseFieldsEnabled(true);
+  }
+
+  private openBlankExpenseRecord(month: number, year: number): void {
+    this.isApplyingExpenseRecord = true;
+    this.editingMonthYear = null;
+    this.fileList = [];
+    this.individualExpenses = [];
+    this.expenseForm.reset({
+      expense_month: month,
+      expense_year: year,
+      payment_status: 'Paid',
+      description: '',
+      utilities: null,
+      salaries: null,
+      maintenance: null,
+      consumables: null,
+      marketing: null,
+      other: null
+    }, { emitEvent: false });
+    this.expenseForm.get('expense_month')?.enable({ emitEvent: false });
+    this.expenseForm.get('expense_year')?.enable({ emitEvent: false });
+    this.setMonthlyExpenseFieldsEnabled(true);
+    this.monthAlreadyExists = false;
+    this.isApplyingExpenseRecord = false;
+  }
+
+  private setMonthlyExpenseFieldsEnabled(enabled: boolean): void {
+    const controlsToToggle = ['payment_status', 'description', 'utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'];
+    controlsToToggle.forEach(c => {
+      const control = this.expenseForm?.get(c);
+      if (enabled) {
+        control?.enable({ emitEvent: false });
+      } else {
+        control?.disable({ emitEvent: false });
+      }
+    });
   }
 
   // Individual Expense State
@@ -861,11 +358,11 @@ export class ExpensesComponent implements OnInit {
   }
 
   handlePreview = async (file: NzUploadFile): Promise<void> => {
-    let previewUrl = file.url || file['preview'];
+    let previewUrl = file.url || (file as any)['preview'];
     
     if (!previewUrl && file.originFileObj) {
       previewUrl = await this.getBase64(file.originFileObj as File);
-      file['preview'] = previewUrl;
+      (file as any)['preview'] = previewUrl;
     }
     
     if (previewUrl && typeof previewUrl === 'string') {
@@ -931,17 +428,13 @@ export class ExpensesComponent implements OnInit {
   showStandaloneIndividualExpenseModal(): void {
     this.isStandaloneIndividual = true;
     const currentDate = new Date();
-    let prevMonth = currentDate.getMonth();
-    let prevYear = currentDate.getFullYear();
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear -= 1;
-    }
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
     this.individualExpenseForm.reset({ 
       payment_status: 'Paid', 
       category: 'Maintenance',
-      expense_month: prevMonth,
-      expense_year: prevYear
+      expense_month: currentMonth,
+      expense_year: currentYear
     });
     this.individualFileList = [];
     this.isIndividualExpenseModalVisible = true;
@@ -958,7 +451,7 @@ export class ExpensesComponent implements OnInit {
       if (this.isStandaloneIndividual) {
         this.isSavingStandalone = true;
         const profile = this.supabase.currentProfile;
-        const client = this.supabase.getClient();
+
         
         if (!profile || !profile.hotel_id) {
           this.message.error('No hotel context found');
@@ -977,7 +470,7 @@ export class ExpensesComponent implements OnInit {
         };
 
         try {
-          const { data: insertedData, error } = await client.from('monthly_expenses').insert([payload]).select();
+          const { data: insertedData, error } = await this.supabase.insertExpense(payload);
           if (error) throw error;
           
           if (this.individualFileList.length > 0 && insertedData && insertedData.length > 0) {
@@ -996,7 +489,7 @@ export class ExpensesComponent implements OnInit {
               }
             }
             if (indPaths.length > 0) {
-              await client.from('monthly_expenses').update({ receipts: indPaths }).eq('id', insertedRow.id);
+              await this.supabase.updateExpenseReceipts(insertedRow.id, indPaths);
             }
           }
           this.message.success('Individual expense saved successfully!');
@@ -1041,7 +534,8 @@ export class ExpensesComponent implements OnInit {
   constructor(
     private supabase: SupabaseService,
     private fb: FormBuilder,
-    private message: NzMessageService
+    private message: NzMessageService,
+    private themeService: ThemeService
   ) {
     const currentDate = new Date();
     let prevMonth = currentDate.getMonth(); // 0-indexed, meaning previous month (e.g. June (5) => May (5 in 1-indexed))
@@ -1083,6 +577,10 @@ export class ExpensesComponent implements OnInit {
           } else {
             if (config.table) this.applySavedColumns(config.table);
             if (config.popup) this.applySavedPopupFields(config.popup);
+            this.sortColumn = config.sort_column || 'month_year';
+            this.sortDirection = config.sort_direction || 'desc';
+            this.isMandatoryCheckEnabled = config.mandatory_edit_check || false;
+            this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
           }
         } else {
           const local = localStorage.getItem('expenses_column_config');
@@ -1095,10 +593,76 @@ export class ExpensesComponent implements OnInit {
               } else {
                 if (parsed.table) this.applySavedColumns(parsed.table);
                 if (parsed.popup) this.applySavedPopupFields(parsed.popup);
+                this.sortColumn = parsed.sort_column || 'month_year';
+                this.sortDirection = parsed.sort_direction || 'desc';
+                this.isMandatoryCheckEnabled = parsed.mandatory_edit_check || false;
+                this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
               }
             } catch (e) {}
           }
         }
+      }
+    });
+
+    this.themeSubscription = this.themeService.currentTheme$.subscribe(theme => {
+      this.chartTheme = theme === 'theme-cream-white' ? 'light' : 'dark';
+      this.primaryColor = theme === 'theme-cream-white' ? '#1c1917' : '#d4af37';
+      this.updateCharts();
+    });
+  }
+
+  isColumnMandatory(key: string): boolean {
+    const col = this.popupFields?.find(c => c.key === key);
+    return col ? col.mandatory === true : false;
+  }
+
+  applyMandatoryChecks(mandatory: boolean): void {
+    if (!this.popupFields || this.popupFields.length === 0) return;
+
+    this.popupFields.forEach(col => {
+      const isMandatory = col.mandatory === true;
+      
+      // If it's month_year, we need to update both expense_month and expense_year
+      if (col.key === 'month_year') {
+        const monthControl = this.expenseForm?.get('expense_month');
+        const yearControl = this.expenseForm?.get('expense_year');
+        [monthControl, yearControl].forEach(control => {
+          if (control) {
+            if (isMandatory) {
+              if (control === monthControl) {
+                control.setValidators([Validators.required, Validators.min(1), Validators.max(12)]);
+              } else {
+                control.setValidators([Validators.required, Validators.min(2000)]);
+              }
+            } else {
+              control.clearValidators();
+              if (control === monthControl) {
+                control.setValidators([Validators.min(1), Validators.max(12)]);
+              } else {
+                control.setValidators([Validators.min(2000)]);
+              }
+            }
+            control.updateValueAndValidity();
+          }
+        });
+        return;
+      }
+
+      const control = this.expenseForm?.get(col.key);
+      if (control) {
+        if (isMandatory) {
+          if (['utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'].includes(col.key)) {
+            control.setValidators([Validators.required, Validators.min(0)]);
+          } else {
+            control.setValidators([Validators.required]);
+          }
+        } else {
+          control.clearValidators();
+          if (['utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'].includes(col.key)) {
+            control.setValidators([Validators.min(0)]);
+          }
+        }
+        control.updateValueAndValidity();
       }
     });
   }
@@ -1114,7 +678,8 @@ export class ExpensesComponent implements OnInit {
       if (existing) {
         newCols.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         colMap.delete(s.key);
       }
@@ -1156,7 +721,8 @@ export class ExpensesComponent implements OnInit {
       if (existing) {
         newFields.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         fieldMap.delete(s.key);
       }
@@ -1164,11 +730,12 @@ export class ExpensesComponent implements OnInit {
     
     fieldMap.forEach(f => newFields.push(f));
     this.popupFields = newFields;
+    this.applyMandatoryChecks(false);
   }
 
   async saveColumnConfig(): Promise<void> {
-    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible }));
-    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible }));
+    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory }));
+    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible, mandatory: f.mandatory }));
     const combined = { table: tableConfig, popup: popupConfig };
 
     const profile = this.supabase.currentProfile;
@@ -1206,20 +773,195 @@ export class ExpensesComponent implements OnInit {
     await this.loadExpenses();
   }
 
+  ngOnDestroy(): void {
+    if (this.themeSubscription) {
+      this.themeSubscription.unsubscribe();
+    }
+  }
+
   async loadExpenses() {
     this.loading = true;
-    const client = this.supabase.getClient();
-    const { data, error } = await client
-      .from('monthly_expenses')
-      .select('*')
-      .order('expense_year', { ascending: false })
-      .order('expense_month', { ascending: false });
+    const profile = this.supabase.currentProfile;
+    const hotelId = profile?.hotel_id;
+    const { data, error } = await this.supabase.getMonthlyExpenses(hotelId);
     
+    const { data: entries } = await this.supabase.getTotalRevenue(hotelId);
+    const dbRevenue = (entries || []).reduce((sum, e) => sum + Number(e.total_revenue || 0), 0);
+
     if (data) {
       this.expenses = data;
       this.groupExpensesByMonth(data);
+      
+      const totalExpenses = data.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+      this.totalRevenueYtd = dbRevenue;
+
+      this.updateCharts();
     }
     this.loading = false;
+  }
+
+  updateCharts(): void {
+    const isLight = this.chartTheme === 'light';
+    const textColor = isLight ? '#4b5563' : '#9ca3af';
+
+    // 1. Prepare Category-wise Donut Chart Data
+    let salariesTotal = 0;
+    let utilitiesTotal = 0;
+    let maintenanceTotal = 0;
+    let consumablesTotal = 0;
+    let marketingTotal = 0;
+    let otherTotal = 0;
+
+    this.filteredGroupedExpenses.forEach(e => {
+      salariesTotal += Number(e.salaries || 0);
+      utilitiesTotal += Number(e.utilities || 0);
+      maintenanceTotal += Number(e.maintenance || 0);
+      consumablesTotal += Number(e.consumables || 0);
+      marketingTotal += Number(e.marketing || 0);
+      otherTotal += Number(e.other || 0);
+
+      if (e.individual_items && e.individual_items.length > 0) {
+        e.individual_items.forEach((item: any) => {
+          const cat = (item.category || '').toLowerCase();
+          if (cat === 'salaries') salariesTotal += Number(item.amount || 0);
+          else if (cat === 'utilities') utilitiesTotal += Number(item.amount || 0);
+          else if (cat === 'maintenance') maintenanceTotal += Number(item.amount || 0);
+          else if (cat === 'consumables') consumablesTotal += Number(item.amount || 0);
+          else if (cat === 'marketing') marketingTotal += Number(item.amount || 0);
+          else otherTotal += Number(item.amount || 0);
+        });
+      }
+    });
+
+    const grandTotal = salariesTotal + utilitiesTotal + maintenanceTotal + consumablesTotal + marketingTotal + otherTotal;
+    
+    // Default fallback values if no entries exist
+    let sVal = salariesTotal;
+    let uVal = utilitiesTotal;
+    let mVal = maintenanceTotal;
+    let cVal = consumablesTotal;
+    let mkVal = marketingTotal;
+    let oVal = otherTotal;
+    let finalTotal = grandTotal;
+
+    if (grandTotal === 0) {
+      sVal = 450000;
+      uVal = 180000;
+      mVal = 120000;
+      cVal = 90000;
+      mkVal = 60000;
+      oVal = 40000;
+      finalTotal = sVal + uVal + mVal + cVal + mkVal + oVal;
+    }
+
+    const categoriesConfig = [
+      { name: 'Salaries', amount: sVal, color: '#d4af37' },
+      { name: 'Utilities', amount: uVal, color: '#3b82f6' },
+      { name: 'Maintenance', amount: mVal, color: '#10b981' },
+      { name: 'Consumables', amount: cVal, color: '#f43f5e' },
+      { name: 'Marketing', amount: mkVal, color: '#8b5cf6' },
+      { name: 'Other', amount: oVal, color: '#71717a' }
+    ];
+
+    this.categoryPercentages = categoriesConfig.map(cat => {
+      const pct = finalTotal > 0 ? (cat.amount / finalTotal) * 100 : 0;
+      return {
+        name: cat.name,
+        amount: cat.amount,
+        percentage: Math.round(pct * 10) / 10,
+        color: cat.color
+      };
+    });
+
+    this.fixedVsVariableChartOptions = {
+      series: this.categoryPercentages.map(c => c.amount),
+      chart: {
+        type: 'donut',
+        height: 200,
+        background: 'transparent',
+        fontFamily: "'Plus Jakarta Sans', sans-serif"
+      },
+      labels: this.categoryPercentages.map(c => c.name),
+      colors: this.categoryPercentages.map(c => c.color),
+      stroke: { show: false },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '72%',
+            background: 'transparent',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: '9px',
+                color: textColor,
+                offsetY: -5
+              },
+              value: {
+                show: true,
+                fontSize: '15px',
+                fontWeight: 'bold',
+                color: isLight ? '#1c1917' : '#ffffff',
+                offsetY: 5,
+                formatter: () => '₹' + (finalTotal >= 100000 ? (finalTotal / 100000).toFixed(1) + 'L' : finalTotal.toLocaleString('en-IN'))
+              },
+              total: {
+                show: true,
+                label: 'Total',
+                color: textColor,
+                formatter: () => '₹' + (finalTotal >= 100000 ? (finalTotal / 100000).toFixed(1) + 'L' : finalTotal.toLocaleString('en-IN'))
+              }
+            }
+          }
+        }
+      },
+      dataLabels: { enabled: false },
+      legend: { show: false },
+      tooltip: {
+        theme: this.chartTheme,
+        y: {
+          formatter: (value) => '₹' + Number(value).toLocaleString('en-IN')
+        }
+      }
+    };
+
+    // 2. Prepare Radial Bar Chart (Liability Clearance Rate)
+    const totalOutflow = this.totalOutflowYtd;
+    const pending = this.pendingLiabilities;
+    const paidAmount = totalOutflow > pending ? totalOutflow - pending : 0;
+    const clearanceRate = totalOutflow > 0 ? Math.round((paidAmount / totalOutflow) * 100) : 100;
+
+    this.clearanceChartOptions = {
+      series: [clearanceRate],
+      chart: {
+        type: 'radialBar',
+        height: 75,
+        width: 75,
+        sparkline: { enabled: true }
+      },
+      plotOptions: {
+        radialBar: {
+          hollow: { size: '55%' },
+          track: {
+            background: isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.08)',
+            strokeWidth: '100%'
+          },
+          dataLabels: {
+            name: { show: false },
+            value: {
+              show: true,
+              fontSize: '11px',
+              fontWeight: 'bold',
+              color: isLight ? '#1c1917' : '#ffffff',
+              offsetY: 3,
+              formatter: (val) => `${val}%`
+            }
+          }
+        }
+      },
+      colors: ['#10b981'],
+      stroke: { lineCap: 'round' }
+    };
   }
 
   groupExpensesByMonth(rawExpenses: any[]) {
@@ -1334,7 +1076,7 @@ export class ExpensesComponent implements OnInit {
       consumables: null,
       marketing: null,
       other: null
-    });
+    }, { emitEvent: false });
     this.expenseForm.get('expense_month')?.enable();
     this.expenseForm.get('expense_year')?.enable();
     this.checkDuplicateMonth();
@@ -1342,6 +1084,7 @@ export class ExpensesComponent implements OnInit {
   }
 
   openEditModal(data: any): void {
+    this.isApplyingExpenseRecord = true;
     this.editingMonthYear = { month: data.expense_month, year: data.expense_year };
     
     // Load existing main receipts into the file uploader
@@ -1379,9 +1122,34 @@ export class ExpensesComponent implements OnInit {
       consumables: data.consumables || null,
       marketing: data.marketing || null,
       other: data.other || null
-    });
+    }, { emitEvent: false });
+    this.expenseForm.get('expense_month')?.enable();
+    this.expenseForm.get('expense_year')?.enable();
+    this.isApplyingExpenseRecord = false;
     this.checkDuplicateMonth();
     this.isModalVisible = true;
+  }
+
+  get calculateTotalAmount(): number {
+    let total = 0;
+    
+    const categories = ['utilities', 'salaries', 'maintenance', 'consumables', 'marketing', 'other'];
+    categories.forEach(cat => {
+      const val = this.expenseForm?.get(cat)?.value;
+      if (val) {
+        total += Number(val);
+      }
+    });
+    
+    if (this.individualExpenses && this.individualExpenses.length > 0) {
+      this.individualExpenses.forEach(ind => {
+        if (ind.amount) {
+          total += Number(ind.amount);
+        }
+      });
+    }
+    
+    return total;
   }
 
   handleCancel(): void {
@@ -1400,9 +1168,27 @@ export class ExpensesComponent implements OnInit {
       return;
     }
 
+    if (this.isColumnMandatory('description') || this.isColumnMandatory('receipts')) {
+      const descControl = this.expenseForm.get('description');
+      if (this.isColumnMandatory('description') && descControl) {
+        descControl.markAsDirty();
+        descControl.updateValueAndValidity();
+        if (!descControl.valid) {
+          this.message.error('Ledger description is required.');
+          return;
+        }
+      }
+      
+      const status = this.expenseForm.get('payment_status')?.value;
+      if (this.isColumnMandatory('receipts') && status === 'Paid' && (!this.fileList || this.fileList.length === 0)) {
+        this.message.error('At least one receipt document is required for paid expenses.');
+        return;
+      }
+    }
+
     const formData = this.expenseForm.getRawValue(); // Get values including disabled fields
     const profile = this.supabase.currentProfile;
-    const client = this.supabase.getClient();
+
 
     if (!profile || !profile.hotel_id) {
       this.message.error('No hotel context found');
@@ -1413,12 +1199,11 @@ export class ExpensesComponent implements OnInit {
     try {
       if (this.editingMonthYear) {
         // Delete all existing monthly_expenses matching this month and year for this hotel
-        const { error: deleteError } = await client
-          .from('monthly_expenses')
-          .delete()
-          .eq('hotel_id', profile.hotel_id)
-          .eq('expense_month', this.editingMonthYear.month)
-          .eq('expense_year', this.editingMonthYear.year);
+        const { error: deleteError } = await this.supabase.deleteExpensesByMonthYear(
+          profile.hotel_id, 
+          this.editingMonthYear.month, 
+          this.editingMonthYear.year
+        );
 
         if (deleteError) throw deleteError;
       } else {
@@ -1494,7 +1279,7 @@ export class ExpensesComponent implements OnInit {
         });
       }
 
-      const { data: insertedData, error: insertError } = await client.from('monthly_expenses').insert(payloads).select();
+      const { data: insertedData, error: insertError } = await this.supabase.insertMultipleExpenses(payloads);
       if (insertError) throw insertError;
 
       // Handle File Uploads
@@ -1523,7 +1308,7 @@ export class ExpensesComponent implements OnInit {
             }
           }
           if (mainPaths.length > 0) {
-            await client.from('monthly_expenses').update({ receipts: mainPaths }).in('id', fixedRowIds);
+            await this.supabase.updateMultipleExpenseReceipts(fixedRowIds, mainPaths);
           }
         }
 
@@ -1553,7 +1338,7 @@ export class ExpensesComponent implements OnInit {
                 }
               }
               if (indPaths.length > 0) {
-                await client.from('monthly_expenses').update({ receipts: indPaths }).eq('id', insertedRow.id);
+                await this.supabase.updateExpenseReceipts(insertedRow.id, indPaths);
               }
             }
           }
@@ -1579,16 +1364,15 @@ export class ExpensesComponent implements OnInit {
 
   async deleteExpenseGroup(data: any) {
     try {
-      const client = this.supabase.getClient();
+
       const profile = this.supabase.currentProfile;
       if (!profile || !profile.hotel_id) throw new Error('No hotel context');
 
-      const { error } = await client
-        .from('monthly_expenses')
-        .delete()
-        .eq('hotel_id', profile.hotel_id)
-        .eq('expense_month', data.expense_month)
-        .eq('expense_year', data.expense_year);
+      const { error } = await this.supabase.deleteExpensesByMonthYear(
+        profile.hotel_id, 
+        data.expense_month, 
+        data.expense_year
+      );
 
       if (error) throw error;
       this.message.success('Expense record deleted successfully!');

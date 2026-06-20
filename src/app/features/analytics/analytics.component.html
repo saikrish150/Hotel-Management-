@@ -2,22 +2,65 @@
   <!-- Header -->
   <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
     <div>
-      <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Executive Analytics</h2>
+      <div class="flex items-center gap-3">
+        <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Executive Analytics</h2>
+        <span [ngClass]="isLiveMode ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'"
+              class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded border flex items-center gap-1.5 h-5 mt-1.5">
+          <span class="w-1.5 h-1.5 rounded-full" [ngClass]="isLiveMode ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"></span>
+          {{ isLiveMode ? 'Live Database' : 'Blended Simulation' }}
+        </span>
+      </div>
       <p class="text-sm text-[var(--theme-text-muted)] mt-2">Deep Insights into Tenant Occupancy, Channels, and RevPAR Optimization</p>
     </div>
     
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex bg-[var(--theme-surface)] rounded-xl p-1 border border-[var(--theme-border)]">
-        <button class="px-5 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all bg-transparent border-none cursor-pointer">7D</button>
-        <button class="px-5 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)] border-none cursor-pointer">30D</button>
-        <button class="px-5 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all bg-transparent border-none cursor-pointer">YTD</button>
-      </div>
-      
-      <button nz-button 
-              class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2"
-              [style.background-color]="primaryColor">
+      <!-- Download Button -->
+      <button nz-button (click)="downloadReport()"
+              class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] !text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2">
         <span nz-icon nzType="download" nzTheme="outline"></span> Download Report
       </button>
+    </div>
+  </div>
+
+  <!-- Time Filter Dropdowns & Presets -->
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[var(--theme-surface)]/30 rounded-2xl p-4 border border-[var(--theme-border)]">
+    <!-- Calendar Dropdowns (like Reports tab) -->
+    <div class="flex flex-wrap items-center gap-4 bg-[var(--theme-surface)] rounded-xl p-2 border border-[var(--theme-border)]">
+      <div class="flex items-center gap-2 px-2">
+        <span class="text-xs text-[var(--theme-text-muted)] font-semibold uppercase tracking-wider">Year</span>
+        <nz-select [(ngModel)]="selectedYear" (ngModelChange)="onFilterChange()" class="w-28 custom-dark-select">
+          <nz-option *ngFor="let y of years" [nzValue]="y" [nzLabel]="y.toString()"></nz-option>
+        </nz-select>
+      </div>
+      <div class="hidden sm:block h-6 w-[1px] bg-[var(--theme-border)]"></div>
+      <div class="flex items-center gap-2 px-2">
+        <span class="text-xs text-[var(--theme-text-muted)] font-semibold uppercase tracking-wider">Month</span>
+        <nz-select [(ngModel)]="selectedMonth" (ngModelChange)="onFilterChange()" class="w-44 custom-dark-select">
+          <nz-option *ngFor="let m of months" [nzValue]="m.value" [nzLabel]="m.label"></nz-option>
+        </nz-select>
+      </div>
+    </div>
+
+    <!-- Presets & Range Picker -->
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Preset Buttons -->
+      <div class="flex bg-[var(--theme-surface)] rounded-xl p-1 border border-[var(--theme-border)]">
+        <button (click)="selectPreset('30D')" 
+                class="px-5 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer"
+                [ngClass]="activePreset === '30D' ? 'text-black bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-semibold' : 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] bg-transparent'">30D</button>
+        <button (click)="selectPreset('60D')" 
+                class="px-5 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer"
+                [ngClass]="activePreset === '60D' ? 'text-black bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-semibold' : 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] bg-transparent'">60D</button>
+        <button (click)="selectPreset('90D')" 
+                class="px-5 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer"
+                [ngClass]="activePreset === '90D' ? 'text-black bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-semibold' : 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] bg-transparent'">90D</button>
+        <button (click)="selectPreset('YTD')" 
+                class="px-5 py-2 text-xs font-bold rounded-lg transition-all border-none cursor-pointer"
+                [ngClass]="activePreset === 'YTD' ? 'text-black bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-semibold' : 'text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] bg-transparent'">YTD</button>
+      </div>
+
+      <!-- Date Range Selector -->
+      <nz-range-picker [(ngModel)]="dateRange" (ngModelChange)="onDateRangeChange($event)" class="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text-main)] h-10 px-3 w-64"></nz-range-picker>
     </div>
   </div>
 
@@ -34,59 +77,65 @@
         </div>
 
         <!-- KPI Cards (6 columns) -->
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-7 gap-4">
           
           <!-- 1: Today's Revenue -->
-          <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-1">
             <div class="flex justify-between items-start z-10">
               <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">TODAY'S REVENUE</p>
-              <span class="text-[var(--theme-primary)] text-lg leading-none">↗</span>
+              <div class="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 flex items-center justify-center">
+                <span class="text-[var(--theme-primary)] text-sm">↗</span>
+              </div>
             </div>
             <div class="z-10 mt-auto">
-              <h3 class="text-3xl text-[var(--theme-primary)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().todayRevenue) }}</h3>
+              <h3 class="text-3xl text-[var(--theme-primary)] font-medium mb-1">{{ formatKpi(filteredTodayRevenue) }}</h3>
               <p class="text-[10px] font-medium"><span class="text-emerald-500">+12.5%</span> <span class="text-[var(--theme-text-muted)]/60 ml-1">vs yesterday</span></p>
             </div>
             <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-[var(--theme-primary)]/5 blur-2xl rounded-full pointer-events-none"></div>
           </div>
 
           <!-- 2: Monthly Rev -->
-          <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-2">
             <div class="flex justify-between items-start">
-              <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">MONTHLY REV.</p>
-              <span nz-icon nzType="wallet" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+              <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">PERIOD REV.</p>
+              <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <span nz-icon nzType="wallet" nzTheme="outline" class="text-blue-400 text-sm"></span>
+              </div>
             </div>
             <div class="mt-auto">
-              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-2">{{ formatKpi(dashboardService.kpis().monthlyRevenue) }}</h3>
+              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-2">{{ formatKpi(filteredPeriodRevenue) }}</h3>
               <div class="w-12 h-[3px] bg-[var(--theme-primary)] rounded-full"></div>
             </div>
           </div>
 
           <!-- 3: Expenses -->
-          <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-3">
             <div class="flex justify-between items-start">
               <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">EXPENSES</p>
-              <span nz-icon nzType="container" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+              <div class="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center">
+                <span nz-icon nzType="container" nzTheme="outline" class="text-rose-400 text-sm"></span>
+              </div>
             </div>
             <div class="mt-auto">
-              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().totalExpenses) }}</h3>
+              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ formatKpi(filteredTotalExpenses) }}</h3>
               <p class="text-[10px] font-medium"><span class="text-emerald-500">+2.1%</span> <span class="text-[var(--theme-text-muted)]/60 ml-1">vs last month</span></p>
             </div>
           </div>
 
           <!-- 4: Net Profit -->
-          <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-4">
             <div class="flex items-center gap-1.5">
               <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">NET PROFIT</p>
               <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
             </div>
             <div class="mt-auto">
-              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ formatKpi(dashboardService.kpis().netProfit) }}</h3>
+              <h3 class="text-3xl text-emerald-400 font-medium mb-1">{{ formatKpi(filteredNetProfit) }}</h3>
               <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Margin: 62.5%</p>
             </div>
           </div>
 
           <!-- 5: Occupancy -->
-          <div class="glass-card min-h-[140px] relative">
+          <div class="glass-card min-h-[140px] relative animate-entrance-5">
             <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider absolute top-5 left-5 z-10">OCCUPANCY</p>
             <div class="absolute inset-0 flex items-center justify-center pt-4">
               <apx-chart *ngIf="occupancyChartOptions"
@@ -99,15 +148,31 @@
             </div>
           </div>
 
-          <!-- 6: Active Guests -->
-          <div class="glass-card flex flex-col justify-between min-h-[140px]">
+          <!-- 6: Average Stay Duration -->
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-6">
             <div class="flex justify-between items-start">
-              <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">ACTIVE GUESTS</p>
-              <span nz-icon nzType="team" nzTheme="outline" class="text-[var(--theme-text-muted)] text-sm"></span>
+              <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">AVG STAY TIME</p>
+              <div class="w-7 h-7 rounded-lg bg-sky-500/10 flex items-center justify-center">
+                <span nz-icon nzType="clock-circle" nzTheme="outline" class="text-sky-400 text-sm"></span>
+              </div>
             </div>
             <div class="mt-auto">
-              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ dashboardService.kpis().totalGuests }}</h3>
-              <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Current Stay</p>
+              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ averageStayDuration }} <span class="text-xs text-[var(--theme-text-muted)]">Days</span></h3>
+              <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Per check-in</p>
+            </div>
+          </div>
+
+          <!-- 7: Average People Per Day -->
+          <div class="glass-card flex flex-col justify-between min-h-[140px] animate-entrance-7">
+            <div class="flex justify-between items-start">
+              <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider">GUESTS / DAY</p>
+              <div class="w-7 h-7 rounded-lg bg-teal-500/10 flex items-center justify-center">
+                <span nz-icon nzType="user" nzTheme="outline" class="text-teal-400 text-sm"></span>
+              </div>
+            </div>
+            <div class="mt-auto">
+              <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mb-1">{{ averagePeoplePerDay }}</h3>
+              <p class="text-[10px] text-[var(--theme-text-muted)] font-medium">Daily average</p>
             </div>
           </div>
 
@@ -117,13 +182,13 @@
       <!-- ========================================== -->
       <!-- SECTION 2: REVENUE TRENDS & COMPARISONS -->
       <!-- ========================================== -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-entrance-7">
         
         <!-- Revenue Trends Area Chart -->
         <div class="lg:col-span-2 glass-card relative">
           <div class="flex justify-between items-start mb-2">
             <div>
-              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Revenue Trends</h3>
+              <h3 class="text-lg text-[var(--theme-text-main)] font-medium section-header">Revenue Trends</h3>
               <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">30-Day Trailing Performance</p>
             </div>
             <div class="flex bg-[var(--theme-surface)] rounded-md p-1 border border-[var(--theme-border)]">
@@ -152,13 +217,13 @@
         <!-- P&L Comparison Bar Chart -->
         <div class="glass-card relative">
           <div class="flex justify-between items-start mb-6">
-            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">P&L Comparison</h3>
-            <span nz-icon nzType="more" nzTheme="outline" class="text-[var(--theme-text-muted)] cursor-pointer"></span>
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium section-header">P&L Comparison</h3>
+            <span nz-icon nzType="more" nzTheme="outline" class="text-[var(--theme-text-muted)] cursor-pointer hover:text-[var(--theme-primary)] transition-colors"></span>
           </div>
           
           <div class="flex gap-4 mb-4">
             <div class="flex items-center gap-2">
-              <div class="w-2.5 h-2.5 rounded-sm bg-[var(--theme-primary)]"></div>
+              <div class="w-2.5 h-2.5 rounded-sm bg-[var(--theme-primary)] shadow-[0_0_8px_var(--theme-glow)]"></div>
               <span class="text-[11px] text-[var(--theme-text-muted)] font-medium">Profit</span>
             </div>
             <div class="flex items-center gap-2">
@@ -189,7 +254,7 @@
       <!-- ========================================== -->
       <!-- SECTION 3: ROOM OCCUPANCY & EFFICIENCY -->
       <!-- ========================================== -->
-      <div class="space-y-6">
+      <div class="space-y-6 animate-entrance-8">
         <div>
           <h3 class="text-xl font-normal text-[var(--theme-text-main)] uppercase tracking-wider">Room Occupancy & Efficiency</h3>
           <p class="text-xs text-[var(--theme-text-muted)] mt-1">Deep analysis of yields, average room rates, and RevPAR metrics.</p>
@@ -202,7 +267,9 @@
           <div class="glass-card flex flex-col justify-between min-h-[120px]">
             <div class="flex justify-between items-start">
               <span class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Occupancy Rate</span>
-              <span nz-icon nzType="home" nzTheme="outline" class="text-lg" [style.color]="primaryColor"></span>
+              <div class="w-7 h-7 rounded-lg bg-[var(--theme-primary)]/10 flex items-center justify-center">
+                <span nz-icon nzType="home" nzTheme="outline" class="text-sm" [style.color]="primaryColor"></span>
+              </div>
             </div>
             <div class="flex items-baseline gap-2 mt-auto">
               <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ occupancyRate | number:'1.1-1' }}%</h3>
@@ -351,21 +418,21 @@
             <div class="space-y-2">
               <div class="flex justify-between text-xs font-semibold">
                 <span class="text-[var(--theme-text-muted)]">Direct Booking</span>
-                <span [style.color]="primaryColor">55%</span>
+                <span [style.color]="primaryColor">{{ directPercent }}%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
-                <div class="h-full rounded-full" [style.background-color]="primaryColor" style="width: 55%"></div>
+                <div class="h-full rounded-full" [style.background-color]="primaryColor" [style.width]="directPercent + '%'"></div>
               </div>
             </div>
 
             <!-- OTA -->
             <div class="space-y-2">
               <div class="flex justify-between text-xs font-semibold">
-                <span class="text-[var(--theme-text-muted)]">OTA (Expedia, Booking)</span>
-                <span class="text-[var(--theme-text-main)]">30%</span>
+                <span class="text-[var(--theme-text-muted)]">OTA (Expedia, Booking, MMT)</span>
+                <span class="text-[var(--theme-text-main)]">{{ otaPercent }}%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
-                <div class="h-full rounded-full" [style.background-color]="midColor" style="width: 30%"></div>
+                <div class="h-full rounded-full" [style.background-color]="midColor" [style.width]="otaPercent + '%'"></div>
               </div>
             </div>
 
@@ -373,131 +440,191 @@
             <div class="space-y-2">
               <div class="flex justify-between text-xs font-semibold">
                 <span class="text-[var(--theme-text-muted)]">Corporate / Groups</span>
-                <span class="text-[var(--theme-text-muted)]">15%</span>
+                <span class="text-[var(--theme-text-muted)]">{{ corporatePercent }}%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
-                <div class="h-full rounded-full" [style.background-color]="lowColor" style="width: 15%"></div>
+                <div class="h-full rounded-full" [style.background-color]="lowColor" [style.width]="corporatePercent + '%'"></div>
               </div>
             </div>
 
           </div>
         </div>
 
-        <!-- Occupancy Heatmap Grid -->
-        <div class="lg:col-span-2 glass-card">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Occupancy Heatmap</h3>
-            <div class="flex items-center gap-2 text-[10px] font-semibold text-[var(--theme-text-muted)]">
-              <span>Low</span>
-              <div class="w-24 h-2 rounded-sm" [style.background]="'linear-gradient(to right, ' + veryLowColor + ', ' + lowColor + ', ' + midColor + ', ' + primaryColor + ')'"></div>
-              <span>High</span>
-            </div>
-          </div>
 
-          <div class="-ml-4 -mr-2 -mt-4">
-            <apx-chart *ngIf="occupancyHeatmapChart"
-              [series]="occupancyHeatmapChart.series!"
-              [chart]="occupancyHeatmapChart.chart!"
-              [plotOptions]="occupancyHeatmapChart.plotOptions!"
-              [colors]="occupancyHeatmapChart.colors!"
-              [xaxis]="occupancyHeatmapChart.xaxis!"
-              [yaxis]="occupancyHeatmapChart.yaxis!"
-              [grid]="occupancyHeatmapChart.grid!"
-              [tooltip]="occupancyHeatmapChart.tooltip!"
-              [dataLabels]="occupancyHeatmapChart.dataLabels!"
-            ></apx-chart>
-          </div>
-        </div>
 
       </div>
 
       <!-- ========================================== -->
-      <!-- SECTION 6: INVENTORY YIELD ANALYSIS -->
+      <!-- SECTION 5.5: WEEKDAY, HOURLY & ROOM CATEGORIES -->
       <!-- ========================================== -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- Table -->
-        <div class="lg:col-span-2 glass-card">
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Inventory Performance</h3>
-              <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">AC vs Non-AC Unit Yield Analysis</p>
-            </div>
-            <div>
-              <nz-select [ngModel]="'all'" class="w-36 custom-dark-select">
-                <nz-option nzValue="all" nzLabel="All Properties"></nz-option>
-                <nz-option nzValue="rk" nzLabel="RK Residency"></nz-option>
-              </nz-select>
-            </div>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-              <thead>
-                <tr class="border-b border-[var(--theme-border)]">
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">CATEGORY</th>
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider text-center">TOTAL UNITS</th>
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider text-center">OCCUPIED</th>
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider text-center">ADR</th>
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider text-center">REVPAR</th>
-                  <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider text-right">TREND</th>
-                </tr>
-              </thead>
-              <tbody class="text-sm">
-                <tr class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 transition-colors">
-                  <td class="py-4 font-medium text-[var(--theme-text-main)]">Standard AC</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center font-semibold">12</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center font-semibold">{{ dashboardService.kpis().acRoomsSold }}</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center">₹1,200</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center">₹950</td>
-                  <td class="py-4 text-right"><span class="text-emerald-500 text-xs">↑ 4.2%</span></td>
-                </tr>
-                <tr class="hover:bg-[var(--theme-border)]/20 transition-colors">
-                  <td class="py-4 font-medium text-[var(--theme-text-main)]">Standard Non-AC</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center font-semibold">8</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center font-semibold">{{ dashboardService.kpis().nonAcRoomsSold }}</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center">₹800</td>
-                  <td class="py-4 text-[var(--theme-text-muted)] text-center">₹640</td>
-                  <td class="py-4 text-right"><span class="text-emerald-500 text-xs">↑ 1.1%</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+      <div class="space-y-6 animate-entrance-9">
+        <div>
+          <h3 class="text-xl font-normal text-[var(--theme-text-main)] uppercase tracking-wider">Weekday, Hourly & Categories Audit</h3>
+          <p class="text-xs text-[var(--theme-text-muted)] mt-1">Granular analysis of check-in velocity, booking days, and climate-control sales distributions.</p>
         </div>
 
-        <!-- Business Optimization Recommendations (Creative addition) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Weekday Occupancy -->
+          <div class="glass-card">
+            <div class="mb-4">
+              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Day-of-Week Occupancy</h3>
+              <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Average occupancy rate by weekday</p>
+            </div>
+            <div class="-ml-4 -mr-2">
+              <apx-chart *ngIf="dayOfWeekOccupancyChart"
+                [series]="dayOfWeekOccupancyChart.series!"
+                [chart]="dayOfWeekOccupancyChart.chart!"
+                [plotOptions]="dayOfWeekOccupancyChart.plotOptions!"
+                [colors]="dayOfWeekOccupancyChart.colors!"
+                [xaxis]="dayOfWeekOccupancyChart.xaxis!"
+                [yaxis]="dayOfWeekOccupancyChart.yaxis!"
+                [grid]="dayOfWeekOccupancyChart.grid!"
+                [tooltip]="dayOfWeekOccupancyChart.tooltip!"
+                [dataLabels]="dayOfWeekOccupancyChart.dataLabels!"
+              ></apx-chart>
+            </div>
+          </div>
+
+          <!-- Peak Check-in Hours -->
+          <div class="glass-card">
+            <div class="mb-4">
+              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Peak Check-in Hours</h3>
+              <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Hourly booking arrivals distribution</p>
+            </div>
+            <div class="-ml-4 -mr-2">
+              <apx-chart *ngIf="peakCheckinHoursChart"
+                [series]="peakCheckinHoursChart.series!"
+                [chart]="peakCheckinHoursChart.chart!"
+                [stroke]="peakCheckinHoursChart.stroke!"
+                [colors]="peakCheckinHoursChart.colors!"
+                [xaxis]="peakCheckinHoursChart.xaxis!"
+                [yaxis]="peakCheckinHoursChart.yaxis!"
+                [grid]="peakCheckinHoursChart.grid!"
+                [fill]="peakCheckinHoursChart.fill!"
+                [tooltip]="peakCheckinHoursChart.tooltip!"
+                [dataLabels]="peakCheckinHoursChart.dataLabels!"
+              ></apx-chart>
+            </div>
+          </div>
+
+          <!-- AC vs Non-AC Sales -->
+          <div class="glass-card flex flex-col justify-between">
+            <div class="mb-4">
+              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">AC vs Non-AC Sales</h3>
+              <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Sales volume comparison</p>
+            </div>
+            <div class="flex justify-center items-center py-2">
+              <apx-chart *ngIf="acVsNonAcSalesChart"
+                [series]="acVsNonAcSalesChart.series!"
+                [chart]="acVsNonAcSalesChart.chart!"
+                [labels]="acVsNonAcSalesChart.labels!"
+                [colors]="acVsNonAcSalesChart.colors!"
+                [stroke]="acVsNonAcSalesChart.stroke!"
+                [plotOptions]="acVsNonAcSalesChart.plotOptions!"
+                [dataLabels]="acVsNonAcSalesChart.dataLabels!"
+                [legend]="acVsNonAcSalesChart.legend!"
+                [tooltip]="acVsNonAcSalesChart.tooltip!"
+              ></apx-chart>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SECTION 6: BUSINESS GROWTH INSIGHTS -->
+      <!-- ========================================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-1 gap-6">
+        
+        <!-- Business Optimization Recommendations -->
         <div class="glass-card flex flex-col justify-between">
           <div class="mb-4">
             <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Business growth insights</h3>
-            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Recommendations to optimize yields & growth</p>
+            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Data-driven recommendations to optimize yields & growth</p>
           </div>
 
-          <div class="space-y-4 flex-1 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 flex-1 mt-4">
             <div class="p-3 bg-[var(--theme-primary)]/5 border border-[var(--theme-primary)]/10 rounded-xl">
               <span class="text-xs font-semibold text-[var(--theme-primary)] flex items-center gap-1.5">
-                <span nz-icon nzType="thunderbolt" nzTheme="fill"></span> Optimize Weekend ADR
+                <span nz-icon nzType="thunderbolt" nzTheme="fill"></span> Premium Inventory
               </span>
               <p class="text-[11px] text-[var(--theme-text-muted)] mt-1">
-                Standard AC Occupancy is high. Consider a 10-15% peak rate adjustment on weekends to maximize revenue yield.
+                {{ acInsightsText }}
               </p>
             </div>
 
             <div class="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
               <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-                <span nz-icon nzType="rise" nzTheme="outline"></span> Direct Booking Drive
+                <span nz-icon nzType="rise" nzTheme="outline"></span> Channel Distribution
               </span>
               <p class="text-[11px] text-[var(--theme-text-muted)] mt-1">
-                OTAs account for 30% of booking channels. Promoting direct booking packages can increase profit margins by 5-8%.
+                {{ otaInsightsText }}
               </p>
             </div>
 
             <div class="p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
               <span class="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                <span nz-icon nzType="percentage" nzTheme="outline"></span> Non-AC Room Packages
+                <span nz-icon nzType="percentage" nzTheme="outline"></span> Non-AC Yields
               </span>
               <p class="text-[11px] text-[var(--theme-text-muted)] mt-1">
-                Occupancy of Standard Non-AC rooms stands at {{ (dashboardService.kpis().nonAcRoomsSold / 8) * 100 | number:'1.0-0' }}%. Run special dynamic package offers for business travelers.
+                {{ nonAcInsightsText }}
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- SECTION 7: ROOM NUMBER WISE STATISTICS -->
+      <!-- ========================================== -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Room wise chart -->
+        <div class="lg:col-span-2 glass-card">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Room Performance & Stay Analytics</h3>
+              <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Booking Counts vs Average Stay Duration Room Number Wise</p>
+            </div>
+          </div>
+
+          <div class="-ml-4 -mr-2">
+            <apx-chart *ngIf="roomWiseStatsChart"
+              [series]="roomWiseStatsChart.series!"
+              [chart]="roomWiseStatsChart.chart!"
+              [xaxis]="roomWiseStatsChart.xaxis!"
+              [yaxis]="roomWiseStatsChart.yaxis!"
+              [stroke]="roomWiseStatsChart.stroke!"
+              [plotOptions]="roomWiseStatsChart.plotOptions!"
+              [colors]="roomWiseStatsChart.colors!"
+              [grid]="roomWiseStatsChart.grid!"
+              [legend]="roomWiseStatsChart.legend!"
+              [tooltip]="roomWiseStatsChart.tooltip!"
+            ></apx-chart>
+          </div>
+        </div>
+
+        <!-- Room wise leader list -->
+        <div class="glass-card flex flex-col justify-between">
+          <div class="mb-4">
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Popular Rooms</h3>
+            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Top room configurations by guest visits</p>
+          </div>
+
+          <div class="space-y-3 flex-1 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar">
+            <div *ngFor="let room of roomWiseStats.slice(0, 6)" class="flex justify-between items-center p-2.5 bg-[var(--theme-surface)]/40 hover:bg-[var(--theme-surface)]/80 border border-[var(--theme-border)]/50 rounded-xl transition-all">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-[var(--theme-primary)]/10 border border-[var(--theme-primary)]/20 flex items-center justify-center font-bold text-[var(--theme-primary)] text-sm">
+                  {{ room.roomNumber }}
+                </div>
+                <div>
+                  <p class="text-xs font-semibold text-[var(--theme-text-main)]">Room {{ room.roomNumber }}</p>
+                  <p class="text-[10px] text-[var(--theme-text-muted)]">{{ room.roomCategory }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-xs font-bold text-[var(--theme-text-main)]">{{ room.stayCount }} stays</p>
+                <p class="text-[10px] text-sky-400 font-medium">Ø {{ room.avgStayDuration }} days stay</p>
+              </div>
             </div>
           </div>
         </div>

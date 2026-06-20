@@ -29,176 +29,259 @@
     </div>
   </div>
 
-  <!-- Time Filter Tabs & loading state -->
+  <!-- Time Filter Dropdowns -->
   <div class="flex items-center justify-between">
-    <div class="flex bg-[var(--theme-surface)] rounded-xl p-1 border border-[var(--theme-border)]">
-      <button 
-        (click)="selectQuarter('Q1')" 
-        [class]="selectedQuarter === 'Q1' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
-      >Q1</button>
-      <button 
-        (click)="selectQuarter('Q2')" 
-        [class]="selectedQuarter === 'Q2' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
-      >Q2</button>
-      <button 
-        (click)="selectQuarter('Q3')" 
-        [class]="selectedQuarter === 'Q3' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
-      >Q3</button>
-      <button 
-        (click)="selectQuarter('Q4')" 
-        [class]="selectedQuarter === 'Q4' ? 'px-6 py-2 text-xs font-bold text-black bg-[var(--theme-primary)] rounded-lg shadow-[0_0_10px_var(--theme-glow)]' : 'px-6 py-2 text-xs font-bold text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] rounded-lg transition-all'"
-      >Q4 2026</button>
+    <div class="flex flex-wrap items-center gap-4 bg-[var(--theme-surface)] rounded-xl p-2 border border-[var(--theme-border)]">
+      <div class="flex items-center gap-2 px-2">
+        <span class="text-xs text-[var(--theme-text-muted)] font-semibold uppercase tracking-wider">Year</span>
+        <nz-select [(ngModel)]="selectedYear" (ngModelChange)="onFilterChange()" class="w-28 custom-dark-select">
+          <nz-option *ngFor="let y of years" [nzValue]="y" [nzLabel]="y.toString()"></nz-option>
+        </nz-select>
+      </div>
+      <div class="hidden sm:block h-6 w-[1px] bg-[var(--theme-border)]"></div>
+      <div class="flex items-center gap-2 px-2">
+        <span class="text-xs text-[var(--theme-text-muted)] font-semibold uppercase tracking-wider">Month</span>
+        <nz-select [(ngModel)]="selectedMonth" (ngModelChange)="onFilterChange()" class="w-44 custom-dark-select">
+          <nz-option *ngFor="let m of months" [nzValue]="m.value" [nzLabel]="m.label"></nz-option>
+        </nz-select>
+      </div>
     </div>
   </div>
 
   <nz-spin [nzSpinning]="loading">
     <div class="space-y-8">
       
-      <!-- KPI Cards (4 columns) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <!-- KPI Cards (6 columns) -->
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         
         <!-- 1: Total Revenue -->
-        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
           <div>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">TOTAL REVENUE</p>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(totalRevenue) }}</h3>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">TOTAL REVENUE</p>
+            <h3 class="text-2xl text-[var(--theme-primary)] font-medium">{{ formatKpi(totalRevenue) }}</h3>
           </div>
-          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
-            <span>↑ {{ revenueGrowth }}%</span>
-            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ revenueGrowth | number:'1.1-1' }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs target</span>
           </div>
-          <span nz-icon nzType="bank" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+          <span nz-icon nzType="bank" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
         </div>
 
         <!-- 2: Operating Expenses -->
-        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
           <div>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">OPERATING EXPENSES</p>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(totalExpenses) }}</h3>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">OPERATING EXPENSES</p>
+            <h3 class="text-2xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(totalExpenses) }}</h3>
           </div>
-          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
-            <span>↑ {{ expenseGrowth }}%</span>
-            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ expenseGrowth | number:'1.1-1' }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs budget</span>
           </div>
-          <span nz-icon nzType="shopping-cart" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+          <span nz-icon nzType="shopping-cart" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
         </div>
 
         <!-- 3: Net Income -->
-        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
           <div>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">NET INCOME</p>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ formatKpi(netIncome) }}</h3>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">NET INCOME</p>
+            <h3 class="text-2xl text-emerald-400 font-medium">{{ formatKpi(netIncome) }}</h3>
           </div>
-          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
-            <span>↑ {{ incomeGrowth }}%</span>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ incomeGrowth | number:'1.1-1' }}%</span>
             <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
           </div>
-          <span nz-icon nzType="wallet" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+          <span nz-icon nzType="wallet" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
         </div>
 
         <!-- 4: Profit Margin -->
-        <div class="glass-card flex flex-col justify-between min-h-[140px]">
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
           <div>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">PROFIT MARGIN</p>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium">{{ profitMargin | number:'1.1-1' }}%</h3>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">PROFIT MARGIN</p>
+            <h3 class="text-2xl text-[var(--theme-text-main)] font-medium">{{ profitMargin | number:'1.1-1' }}%</h3>
           </div>
-          <div class="flex items-center gap-1 text-[10px] mt-4 font-semibold text-emerald-500">
-            <span>↑ {{ marginGrowth }}%</span>
-            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last period</span>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ marginGrowth | number:'1.1-1' }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last year</span>
           </div>
-          <span nz-icon nzType="rise" nzTheme="outline" class="absolute right-5 top-5 text-2xl text-[var(--theme-text-main)]/10"></span>
+          <span nz-icon nzType="rise" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
+        </div>
+
+        <!-- 5: RevPAR -->
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
+          <div>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">REVPAR</p>
+            <h3 class="text-2xl text-[var(--theme-text-main)] font-medium">₹{{ revPar | number:'1.0-0' }}</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ revParGrowth | number:'1.1-1' }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last month</span>
+          </div>
+          <span nz-icon nzType="percentage" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
+        </div>
+
+        <!-- 6: ADR -->
+        <div class="glass-card flex flex-col justify-between min-h-[130px]">
+          <div>
+            <p class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider mb-2">ADR</p>
+            <h3 class="text-2xl text-[var(--theme-text-main)] font-medium">₹{{ adr | number:'1.0-0' }}</h3>
+          </div>
+          <div class="flex items-center gap-1 text-[9px] mt-4 font-semibold text-emerald-500">
+            <span>↑ {{ adrGrowth | number:'1.1-1' }}%</span>
+            <span class="text-[var(--theme-text-muted)]/60 font-medium">vs last month</span>
+          </div>
+          <span nz-icon nzType="tag" nzTheme="outline" class="absolute right-4 top-4 text-xl text-[var(--theme-text-main)] opacity-10"></span>
         </div>
 
       </div>
 
-      <!-- Table: Comprehensive Breakdown -->
-      <div class="glass-card p-6">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Comprehensive Breakdown</h3>
-          <button class="bg-[var(--theme-surface)] border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all">
-            <span nz-icon nzType="filter" nzTheme="outline"></span> Filter
-          </button>
+      <!-- Charts Grid Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Revenue & Profit Trend Chart -->
+        <div class="lg:col-span-2 glass-card">
+          <div class="mb-4">
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Revenue & Profit Trend</h3>
+            <p class="text-xs text-[var(--theme-text-muted)]">Comparative overlay of operating income against bottom-line profitability</p>
+          </div>
+          <div class="-ml-4 -mr-2">
+            <apx-chart *ngIf="revenueProfitChartOptions"
+              [series]="revenueProfitChartOptions.series!"
+              [chart]="revenueProfitChartOptions.chart!"
+              [xaxis]="revenueProfitChartOptions.xaxis!"
+              [yaxis]="revenueProfitChartOptions.yaxis!"
+              [stroke]="revenueProfitChartOptions.stroke!"
+              [tooltip]="revenueProfitChartOptions.tooltip!"
+              [dataLabels]="revenueProfitChartOptions.dataLabels!"
+              [fill]="revenueProfitChartOptions.fill!"
+              [colors]="revenueProfitChartOptions.colors!"
+              [grid]="revenueProfitChartOptions.grid!"
+              [legend]="revenueProfitChartOptions.legend!"
+            ></apx-chart>
+          </div>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-[var(--theme-border)] text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">
-                <th class="pb-3 w-1/3">Category</th>
-                <th class="pb-3 text-right">Actual</th>
-                <th class="pb-3 text-right">Budget</th>
-                <th class="pb-3 text-right">Variance</th>
-                <th class="pb-3 text-center">Status</th>
-                <th class="pb-3"></th>
-              </tr>
-            </thead>
-            <tbody class="text-sm">
-              <ng-container *ngFor="let cat of filteredCategories">
-                
-                <!-- Main Category Row -->
-                <tr 
-                  (click)="toggleCategory(cat)"
-                  class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 transition-all cursor-pointer"
-                >
-                  <td class="py-4 font-medium text-[var(--theme-text-main)] flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-[var(--theme-border)]/10 flex items-center justify-center text-[var(--theme-primary)] border border-[var(--theme-border)]">
-                      <span nz-icon [nzType]="cat.icon" nzTheme="outline" class="text-sm"></span>
-                    </div>
-                    <span>{{ cat.name }}</span>
-                  </td>
-                  <td class="py-4 text-right text-[var(--theme-text-main)] font-medium">₹{{ cat.actual.toLocaleString() }}</td>
-                  <td class="py-4 text-right text-[var(--theme-text-muted)]">₹{{ cat.budget.toLocaleString() }}</td>
-                  <td class="py-4 text-right font-medium" [ngClass]="cat.variance >= 0 ? 'text-amber-500' : 'text-rose-500'">
-                    {{ formatVariance(cat.variance) }}
-                  </td>
-                  <td class="py-4 text-center">
-                    <span 
-                      class="px-3 py-1.5 rounded-xl text-[9px] font-semibold uppercase tracking-widest"
-                      [ngClass]="{
-                        'bg-emerald-500/10 text-emerald-400 border border-emerald-500/15': cat.status === 'On Target',
-                        'bg-[var(--theme-primary)]/10 text-[var(--theme-primary)] border border-[var(--theme-primary)]/15': cat.status === 'Optimal',
-                        'bg-gray-500/10 text-[var(--theme-text-muted)] border border-[var(--theme-border)]': cat.status === 'Under Review'
-                      }"
-                    >
-                      {{ cat.status }}
-                    </span>
-                  </td>
-                  <td class="py-4 text-right text-[var(--theme-text-muted)] pr-2">
-                    <span nz-icon [nzType]="cat.expanded ? 'up' : 'down'" class="text-xs transition-transform duration-300"></span>
-                  </td>
-                </tr>
+        <!-- Room Revenue Donut Chart -->
+        <div class="glass-card flex flex-col justify-between">
+          <div class="mb-4">
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Room Revenue Yield</h3>
+            <p class="text-xs text-[var(--theme-text-muted)]">Breakdown of gross bookings revenue by room category</p>
+          </div>
+          <div class="flex justify-center items-center py-2">
+            <apx-chart *ngIf="roomRevenueChartOptions"
+              [series]="roomRevenueChartOptions.series!"
+              [chart]="roomRevenueChartOptions.chart!"
+              [labels]="roomRevenueChartOptions.labels!"
+              [colors]="roomRevenueChartOptions.colors!"
+              [stroke]="roomRevenueChartOptions.stroke!"
+              [plotOptions]="roomRevenueChartOptions.plotOptions!"
+              [dataLabels]="roomRevenueChartOptions.dataLabels!"
+              [legend]="roomRevenueChartOptions.legend!"
+              [tooltip]="roomRevenueChartOptions.tooltip!"
+            ></apx-chart>
+          </div>
+        </div>
 
-                <!-- Expanded Sub-row Card (Horizontal flex columns matching screenshot) -->
-                <tr *ngIf="cat.expanded">
-                  <td colspan="6" class="p-0 bg-[var(--theme-border)]/5">
-                    <div class="px-8 py-5 border-b border-[var(--theme-border)] flex gap-12 flex-wrap">
-                      <div *ngFor="let sub of cat.subItems" class="flex flex-col min-w-[150px]">
-                        <span class="text-[10px] text-[var(--theme-text-muted)] uppercase tracking-wider mb-1">{{ sub.name }}</span>
-                        <div class="flex items-baseline gap-2">
-                          <span class="text-[var(--theme-text-main)] font-semibold">₹{{ sub.actual.toLocaleString() }}</span>
-                          <span [class]="sub.trend.startsWith('+') ? 'text-[10px] text-emerald-500 font-bold' : 'text-[10px] text-[var(--theme-text-muted)] font-semibold'">
-                            ({{ sub.trend }})
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
+      </div>
 
-              </ng-container>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Expense Chart -->
+        <div class="lg:col-span-2 glass-card">
+          <div class="mb-4">
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Expense Analysis</h3>
+            <p class="text-xs text-[var(--theme-text-muted)]">
+              {{ selectedMonth === 'all' ? 'Monthly operating expenditures trend' : 'Operating expense categories distribution' }}
+            </p>
+          </div>
+          <div class="-ml-4 -mr-2">
+            <apx-chart *ngIf="expenseChartOptions"
+              [series]="expenseChartOptions.series!"
+              [chart]="expenseChartOptions.chart!"
+              [xaxis]="expenseChartOptions.xaxis!"
+              [labels]="expenseChartOptions.labels!"
+              [colors]="expenseChartOptions.colors!"
+              [plotOptions]="expenseChartOptions.plotOptions!"
+              [dataLabels]="expenseChartOptions.dataLabels!"
+              [legend]="expenseChartOptions.legend!"
+              [tooltip]="expenseChartOptions.tooltip!"
+              [stroke]="expenseChartOptions.stroke!"
+            ></apx-chart>
+          </div>
+        </div>
 
-              <!-- Total Row -->
-              <tr class="font-semibold text-[var(--theme-text-main)] bg-[var(--theme-border)]/5">
-                <td class="py-5">Total</td>
-                <td class="py-5 text-right font-semibold text-[var(--theme-text-main)]">₹{{ totalRevenue.toLocaleString() }}</td>
-                <td class="py-5 text-right text-[var(--theme-text-muted)]">₹{{ totalBudget.toLocaleString() }}</td>
-                <td class="py-5 text-right text-amber-500">{{ formatVariance(totalVariance) }}</td>
-                <td colspan="2" class="py-5"></td>
-              </tr>
-            </tbody>
-          </table>
+        <!-- Quick growth recommendations -->
+        <div class="glass-card flex flex-col justify-between">
+          <div>
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Growth Optimization Recommendations</h3>
+            <p class="text-xs text-[var(--theme-text-muted)]">Dynamic business optimization actions based on periods audit</p>
+          </div>
+          <div class="space-y-4 mt-6 flex-1">
+            <div class="p-3.5 bg-[var(--theme-primary)]/5 border border-[var(--theme-primary)]/10 rounded-xl">
+              <span class="text-xs font-semibold text-[var(--theme-primary)] flex items-center gap-1.5">
+                <span nz-icon nzType="thunderbolt" nzTheme="fill"></span> RevPAR Growth Drive
+              </span>
+              <p class="text-[11px] text-[var(--theme-text-muted)] mt-1.5 leading-relaxed">
+                RevPAR stands at <strong>{{ formatKpi(revPar) }}</strong>. Raising weekend tariffs for Deluxe rooms by 8% could increase dynamic RevPAR yield by 3.5%.
+              </p>
+            </div>
+            <div class="p-3.5 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+              <span class="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                <span nz-icon nzType="pie-chart" nzTheme="outline"></span> Expense Containment
+              </span>
+              <p class="text-[11px] text-[var(--theme-text-muted)] mt-1.5 leading-relaxed">
+                Profit margin is at <strong>{{ profitMargin | number:'1.1-1' }}%</strong>. Focus on containing Utilities & Maintenance costs to secure the net margin above 60%.
+              </p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ========================================== -->
+      <!-- P&L STATEMENT TABLE -->
+      <!-- ========================================== -->
+      <div class="glass-card mt-8">
+        <div class="mb-6 flex items-center justify-between">
+          <div>
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Profit & Loss Chart</h3>
+            <p class="text-[11px] text-[var(--theme-text-muted)] mt-1">Detailed period-wise breakdown of historical revenue and expenditures.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <nz-select [(ngModel)]="plSelectedYear" (ngModelChange)="onPlViewModeChange()" class="custom-dark-select w-32" nzPlaceHolder="Select Year" nzSize="large">
+              <nz-option nzValue="all" nzLabel="All Years"></nz-option>
+              <nz-option *ngFor="let year of years" [nzValue]="year" [nzLabel]="year"></nz-option>
+            </nz-select>
+            <nz-radio-group [(ngModel)]="plViewMode" (ngModelChange)="onPlViewModeChange()" nzButtonStyle="solid" class="custom-dark-radio">
+              <label nz-radio-button nzValue="month">Month-Wise</label>
+              <label nz-radio-button nzValue="year">Year-Wise</label>
+            </nz-radio-group>
+            <button nz-button class="bg-transparent border border-[var(--theme-border)] text-[var(--theme-text-main)] hover:text-[var(--theme-primary)] hover:border-[var(--theme-primary)] rounded-lg text-xs flex items-center gap-2">
+              <span nz-icon nzType="download" nzTheme="outline"></span> Export PDF
+            </button>
+          </div>
+        </div>
+
+        <div class="-ml-4 -mr-2 relative min-h-[350px]">
+          <nz-spin [nzSpinning]="plChartLoading" class="absolute inset-0 z-10 flex items-center justify-center bg-[var(--theme-card)]/50" *ngIf="plChartLoading"></nz-spin>
+          <apx-chart *ngIf="independentPlChartOptions && !plChartLoading"
+            [series]="independentPlChartOptions.series!"
+            [chart]="independentPlChartOptions.chart!"
+            [colors]="independentPlChartOptions.colors!"
+            [plotOptions]="independentPlChartOptions.plotOptions!"
+            [dataLabels]="independentPlChartOptions.dataLabels!"
+            [stroke]="independentPlChartOptions.stroke!"
+            [xaxis]="independentPlChartOptions.xaxis!"
+            [yaxis]="independentPlChartOptions.yaxis!"
+            [grid]="independentPlChartOptions.grid!"
+            [legend]="independentPlChartOptions.legend!"
+            [tooltip]="independentPlChartOptions.tooltip!"
+          ></apx-chart>
         </div>
       </div>
+
+
+
+
 
     </div>
   </nz-spin>

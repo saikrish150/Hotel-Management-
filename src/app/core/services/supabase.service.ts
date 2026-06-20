@@ -172,6 +172,14 @@ export class SupabaseService {
     return this.supabase.auth.signOut();
   }
 
+  async updatePassword(newPassword: string) {
+    return this.supabase.auth.updateUser({ password: newPassword });
+  }
+
+  async updateUserTheme(theme: string) {
+    return this.supabase.auth.updateUser({ data: { theme } });
+  }
+
   async updateHotelColumnConfig(hotelId: string, config: any) {
     const { data, error } = await this.supabase
       .from('hotels')
@@ -259,5 +267,148 @@ export class SupabaseService {
       console.error('Error deleting file:', error);
       throw error;
     }
+  }
+
+  // ==========================================
+  // SECURITY & TENANT ENFORCEMENT
+  // ==========================================
+  private getEnforcedHotelId(providedHotelId?: string): string {
+    const profileHotelId = this.currentProfile?.hotel_id;
+    if (providedHotelId && profileHotelId && providedHotelId !== profileHotelId) {
+      console.warn('Security Warning: Attempted cross-tenant data access. Enforcing current tenant context.');
+    }
+    const finalId = profileHotelId || providedHotelId;
+    if (!finalId) throw new Error('Security Error: No hotel_id context available for this operation.');
+    return finalId;
+  }
+
+  private enforceTenantPayload(payload: any) {
+    if (Array.isArray(payload)) {
+      return payload.map(p => ({ ...p, hotel_id: this.getEnforcedHotelId() }));
+    }
+    return { ...payload, hotel_id: this.getEnforcedHotelId() };
+  }
+
+  // ==========================================
+  // EXPENSES API
+  // ==========================================
+  
+  async getMonthlyExpenses(hotelId?: string, expenseYear?: number, expenseMonth?: number) {
+    let query = this.supabase.from('monthly_expenses').select('*').eq('hotel_id', this.getEnforcedHotelId(hotelId));
+    if (expenseYear) query = query.eq('expense_year', expenseYear);
+    if (expenseMonth) query = query.eq('expense_month', expenseMonth);
+    return await query.order('expense_year', { ascending: false }).order('expense_month', { ascending: false });
+  }
+
+  async getTotalRevenue(hotelId?: string) {
+    return await this.supabase.from('daily_entries').select('total_revenue').eq('hotel_id', this.getEnforcedHotelId(hotelId));
+  }
+
+  async insertExpense(payload: any) {
+    return await this.supabase.from('monthly_expenses').insert([this.enforceTenantPayload(payload)]).select();
+  }
+
+  async insertMultipleExpenses(payloads: any[]) {
+    return await this.supabase.from('monthly_expenses').insert(this.enforceTenantPayload(payloads)).select();
+  }
+
+  async updateExpenseReceipts(id: string, receipts: string[]) {
+    return await this.supabase.from('monthly_expenses').update({ receipts }).eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  async updateMultipleExpenseReceipts(ids: string[], receipts: string[]) {
+    return await this.supabase.from('monthly_expenses').update({ receipts }).in('id', ids).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  async deleteExpense(id: string) {
+    return await this.supabase.from('monthly_expenses').delete().eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  async deleteExpensesByMonthYear(hotelId: string, month: number, year: number) {
+    return await this.supabase.from('monthly_expenses')
+      .delete()
+      .eq('hotel_id', this.getEnforcedHotelId(hotelId))
+      .eq('expense_month', month)
+      .eq('expense_year', year);
+  }
+
+  // ==========================================
+  // DAILY ENTRIES API
+  // ==========================================
+
+  async getDailyEntries(hotelId?: string, startDate?: string, endDate?: string) {
+    let query = this.supabase.from('daily_entries').select('*').eq('hotel_id', this.getEnforcedHotelId(hotelId));
+    if (startDate) query = query.gte('entry_date', startDate);
+    if (endDate) query = query.lte('entry_date', endDate);
+    return await query.order('entry_date', { ascending: false });
+  }
+
+  async getDailyEntryByDate(hotelId: string, date: string) {
+    return await this.supabase.from('daily_entries')
+      .select('*')
+      .eq('hotel_id', this.getEnforcedHotelId(hotelId))
+      .eq('entry_date', date)
+      .maybeSingle();
+  }
+
+  async insertDailyEntry(payload: any) {
+    return await this.supabase.from('daily_entries').insert([this.enforceTenantPayload(payload)]);
+  }
+
+  async updateDailyEntry(id: string, payload: any) {
+    return await this.supabase.from('daily_entries').update(payload).eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  async deleteDailyEntry(id: string) {
+    return await this.supabase.from('daily_entries').delete().eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  // ==========================================
+  // ROOM BOOKINGS API
+  // ==========================================
+
+  async getRoomBookings(hotelId?: string) {
+    let query = this.supabase.from('room_bookings').select('*').eq('hotel_id', this.getEnforcedHotelId(hotelId));
+    return await query.order('created_at', { ascending: false });
+  }
+
+  async insertRoomBooking(payload: any) {
+    return await this.supabase.from('room_bookings').insert([this.enforceTenantPayload(payload)]).select();
+  }
+
+  async updateRoomBooking(id: string, payload: any) {
+    return await this.supabase.from('room_bookings').update(payload).eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  async deleteRoomBooking(id: string) {
+    return await this.supabase.from('room_bookings').delete().eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
+  }
+
+  // ==========================================
+  // GUESTS API
+  // ==========================================
+
+  async getGuestByPhone(hotelId: string, phone: string) {
+    return await this.supabase.from('guests')
+      .select('*')
+      .eq('hotel_id', this.getEnforcedHotelId(hotelId))
+      .eq('phone_number', phone)
+      .maybeSingle();
+  }
+  async searchGuests(hotelId: string, query: string) {
+    return await this.supabase.from('guests')
+      .select('*')
+      .eq('hotel_id', this.getEnforcedHotelId(hotelId))
+      .or(`name.ilike.%${query}%,phone_number.ilike.%${query}%,id_number.ilike.%${query}%`)
+      .order('created_at', { ascending: false })
+      .limit(10);
+  }
+
+  async insertGuest(payload: any) {
+    return await this.supabase.from('guests').insert([this.enforceTenantPayload(payload)]).select();
+  }
+
+  async updateGuest(id: string, payload: any) {
+    return await this.supabase.from('guests').update(payload).eq('id', id).eq('hotel_id', this.getEnforcedHotelId());
   }
 }

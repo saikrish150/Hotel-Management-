@@ -4,6 +4,7 @@ export interface ColumnConfig {
   visible: boolean;
   width?: string;
   align?: 'left' | 'center' | 'right';
+  mandatory?: boolean;
 }
 
 export interface TableAndPopupConfig {
@@ -15,15 +16,20 @@ export const DEFAULT_BOOKING_COLUMNS: ColumnConfig[] = [
   { key: 'check_in', label: 'Check-In', visible: true, width: '150px' },
   { key: 'room_number', label: 'Room No', visible: true, width: '100px' },
   { key: 'room_category', label: 'Category', visible: true, width: '120px' },
+  { key: 'booking_source', label: 'Booking Source', visible: true, width: '150px' },
   { key: 'guest_name', label: 'Guest Name', visible: true, width: '150px' },
   { key: 'address', label: 'Address', visible: true, width: '180px' },
   { key: 'id_number', label: 'ID Number', visible: true, width: '120px' },
   { key: 'phone_number', label: 'Phone Number', visible: true, width: '120px' },
+  { key: 'company_name', label: 'Company Name', visible: false, width: '150px' },
+  { key: 'gst_number', label: 'GST Number', visible: false, width: '150px' },
   { key: 'number_of_people', label: 'People', visible: true, width: '80px', align: 'center' },
   { key: 'number_of_days', label: 'Days', visible: true, width: '80px', align: 'center' },
-  { key: 'amount_paid', label: 'Amount Paid', visible: true, width: '120px', align: 'right' },
+  { key: 'total_amount', label: 'Amount Due', visible: true, width: '120px', align: 'right' },
+  { key: 'amount_paid', label: 'Total Amount', visible: true, width: '120px', align: 'right' },
   { key: 'check_out', label: 'Scheduled Check-Out', visible: true, width: '150px' },
   { key: 'actual_checkout', label: 'Actual Check-Out', visible: true, width: '150px' },
+  { key: 'notes', label: 'Notes', visible: false, width: '200px' },
   { key: 'id_documents', label: 'Attachments', visible: true, width: '120px', align: 'center' },
   { key: 'status', label: 'Status', visible: true, width: '160px' }
 ];

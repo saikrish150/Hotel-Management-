@@ -16,9 +16,47 @@ import { NzRadioModule } from 'ng-zorro-antd/radio';
 import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { DateUtils } from '../../shared/utils/date.utils';
 import { NzMessageService } from 'ng-zorro-antd/message';
 import { ColumnConfig, DEFAULT_BOOKING_COLUMNS } from '../../core/models/column-config.model';
 import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
+import { NzAutocompleteModule } from 'ng-zorro-antd/auto-complete';
+
+import { NgApexchartsModule } from 'ng-apexcharts';
+import {
+  ApexAxisChartSeries,
+  ApexNonAxisChartSeries,
+  ApexChart,
+  ApexXAxis,
+  ApexTitleSubtitle,
+  ApexDataLabels,
+  ApexStroke,
+  ApexYAxis,
+  ApexTooltip,
+  ApexFill,
+  ApexTheme,
+  ApexPlotOptions,
+  ApexLegend,
+  ApexGrid
+} from "ng-apexcharts";
+
+export type ChartOptions = {
+  series: ApexAxisChartSeries | ApexNonAxisChartSeries;
+  chart: ApexChart;
+  xaxis: ApexXAxis;
+  stroke: ApexStroke;
+  dataLabels: ApexDataLabels;
+  yaxis: ApexYAxis | ApexYAxis[];
+  title: ApexTitleSubtitle;
+  labels: string[];
+  tooltip: ApexTooltip;
+  fill: ApexFill;
+  theme: ApexTheme;
+  colors: string[];
+  plotOptions: ApexPlotOptions;
+  legend: ApexLegend;
+  grid: ApexGrid;
+};
 
 @Component({
   selector: 'app-bookings',
@@ -40,612 +78,12 @@ import { NzUploadModule, NzUploadFile } from 'ng-zorro-antd/upload';
     NzRadioModule,
     NzPopoverModule,
     NzToolTipModule,
-    NzUploadModule
+    NzUploadModule,
+    NgApexchartsModule,
+    NzAutocompleteModule
   ],
-  template: `
-    <div class="space-y-8 pb-10">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
-        <div>
-          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Room Bookings</h2>
-          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Check-in details, room statuses & guest records</p>
-        </div>
-        <button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-6 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2 cursor-pointer" 
-                (click)="openBookingAddModal()">
-          <span nz-icon nzType="plus"></span> New Booking
-        </button>
-      </div>
-
-      <!-- Database Connection Status Banner -->
-      <div *ngIf="!isDatabaseLinked" class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-            <span nz-icon nzType="warning" nzTheme="outline"></span> Database Table Link Pending
-          </div>
-          <p class="text-xs text-[var(--theme-text-muted)] mt-1 max-w-2xl">
-            Bookings are currently saved in your local browser storage. To synchronize bookings across all devices, create the <code class="text-amber-300 bg-amber-500/5 px-1.5 py-0.5 rounded font-mono">room_bookings</code> table in your Supabase SQL Editor.
-          </p>
-        </div>
-        <button nz-button nzSize="small" class="bg-amber-500 hover:bg-amber-400 text-black border-none rounded-lg text-[10px] font-bold uppercase tracking-wider py-1.5 px-4" (click)="showSqlModal()">
-          Setup SQL Table
-        </button>
-      </div>
-
-
-
-      <!-- Dynamic Bookings Statistics Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Active Check-ins</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ activeCheckedInCount }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-500/5 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Total Guests Registered</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalGuestsRegistered }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/5 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Cumulative Revenue</span>
-          <h3 class="text-3xl text-[var(--theme-primary)] font-medium mt-4">₹{{ totalBookingRevenue | number }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/10 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Avg. Stay Duration</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ averageDurationOfStay }} <span class="text-xs text-[var(--theme-text-muted)]">days</span></h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-500/5 blur-xl rounded-full"></div>
-        </div>
-      </div>
-
-      <div class="glass-card p-6">
-        <div class="flex flex-col gap-3 mb-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">{{ hotelName }}</span>
-            </div>
-            <button *ngIf="hasActiveFilters()" nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-white text-xs flex items-center gap-1" (click)="resetBookingFilters()">
-              <span nz-icon nzType="close"></span> Clear All Filters
-            </button>
-          </div>
-          
-          <!-- Advanced Filtering Toolbar -->
-          <div class="flex flex-col gap-4 border-b border-[var(--theme-border)] pb-4 mb-4 mt-2">
-            <!-- Top row: Quick Filters and Preset Ranges (A tags) -->
-            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-              
-              <!-- Quick Filter Segmented Buttons -->
-              <div class="flex bg-[var(--theme-bg)] p-1 rounded-xl border border-[var(--theme-border)] shadow-inner overflow-x-auto max-w-full hide-scrollbar">
-                <button type="button" [ngClass]="activeQuickFilter === 'all' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('all')">All</button>
-                <button type="button" [ngClass]="activeQuickFilter === 'check-in' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('check-in')">Check In</button>
-                <button type="button" [ngClass]="activeQuickFilter === 'check-out' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('check-out')">Check Out</button>
-                <button type="button" [ngClass]="activeQuickFilter === 'confirmed' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('confirmed')">Confirmed</button>
-              </div>
-
-              <!-- Preset Ranges as Pill Buttons -->
-              <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
-                <span class="text-[var(--theme-text-muted)] text-[10px] uppercase tracking-wider font-bold mr-2">Timeframe:</span>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Today' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Today')">Today</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Yesterday' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Yesterday')">Yesterday</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Past 7 Days' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Past 7 Days')">Past 7 Days</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Past 30 Days' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Past 30 Days')">Past 30 Days</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Current Month' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Current Month')">Current Month</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Previous Month' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Previous Month')">Previous Month</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Last 6 Months' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="applyPresetRange('Last 6 Months')">Last 6 Months</button>
-                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'custom' ? 'timeframe-pill-active' : 'timeframe-pill'" (click)="activePresetRange = 'custom'">Custom...</button>
-              </div>
-            </div>
-
-            <!-- Custom Date Range Picker (Only visible if 'custom' is selected or active) -->
-            <div class="flex items-center gap-4" *ngIf="activePresetRange === 'custom' || globalDateRange.length > 0 && activePresetRange === null">
-              <nz-range-picker [(ngModel)]="globalDateRange" (ngModelChange)="onGlobalFilterChange()" [nzAllowClear]="true" nzFormat="yyyy-MM-dd" class="w-full sm:w-64 h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]"></nz-range-picker>
-            </div>
-          </div>
-          <!-- Hidden Columns restore area -->
-          <div *ngIf="getHiddenColumns().length > 0" class="flex flex-wrap items-center gap-2 bg-zinc-900/30 border border-zinc-800/50 rounded-xl p-2.5">
-            <span class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider mr-1">Hidden Columns:</span>
-            <button *ngFor="let col of getHiddenColumns()" 
-                    (click)="toggleColumnVisibility(col.key, true)" 
-                    class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-zinc-700 transition-all flex items-center gap-1.5 cursor-pointer">
-              <span nz-icon nzType="plus" class="text-[8px]"></span>
-              <span>{{ col.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <nz-table #bookingTable 
-                  [nzData]="filteredBookings" 
-                  [nzFrontPagination]="true" 
-                  [nzPageSize]="10" 
-                  nzSize="middle" 
-                  [nzBordered]="false"
-                  [nzScroll]="{ x: '1600px' }">
-          <thead>
-            <tr class="text-left border-b border-[var(--theme-border)]">
-              <ng-container *ngFor="let col of columns; let i = index">
-                <th *ngIf="col.visible" 
-                    class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none group relative" 
-                    [nzWidth]="col.width || null" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'">
-                  
-                  <div class="flex items-center gap-1.5" [class.justify-center]="col.align === 'center'" [class.justify-end]="col.align === 'right'">
-                    <!-- Reordering & Hide Controls on Hover -->
-                    <div class="hidden group-hover:flex items-center gap-0.5 mr-1 text-[10px] text-[var(--theme-text-muted)] bg-black/80 backdrop-blur rounded-lg px-1.5 py-1 border border-zinc-700 absolute -top-8 left-1/2 -translate-x-1/2 z-10 shadow-lg">
-                      <button nz-button nzType="text" class="text-gray-400 hover:text-white p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0" 
-                              [disabled]="i === 0" (click)="moveColumn(i, 'left'); $event.stopPropagation()">
-                        <span nz-icon nzType="left" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-gray-400 hover:text-white p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-0.5" 
-                              [disabled]="i === columns.length - 1" (click)="moveColumn(i, 'right'); $event.stopPropagation()">
-                        <span nz-icon nzType="right" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-rose-400 hover:text-rose-300 p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-1 border-l border-zinc-700 pl-1" 
-                              (click)="toggleColumnVisibility(col.key, false); $event.stopPropagation()">
-                        <span nz-icon nzType="close" class="text-[9px]"></span>
-                      </button>
-                    </div>
-
-                    <span>{{ col.label }}</span>
-
-                    <!-- Conditional Column Header popover filters -->
-                    <ng-container [ngSwitch]="col.key">
-                      <span *ngSwitchCase="'check_in'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
-                            [class.text-white]="colFilterDate"
-                            nz-popover [nzPopoverContent]="checkInFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'room_number'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
-                            [class.text-white]="colFilterRoomNo"
-                            nz-popover [nzPopoverContent]="roomNoFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'room_category'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
-                            [class.text-white]="colFilterCategory"
-                            nz-popover [nzPopoverContent]="categoryFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'guest_name'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
-                            [class.text-white]="colFilterName"
-                            nz-popover [nzPopoverContent]="nameFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'status'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
-                            [class.text-white]="colFilterStatus"
-                            nz-popover [nzPopoverContent]="statusFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                    </ng-container>
-                  </div>
-                </th>
-              </ng-container>
-              <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none text-right" nzWidth="100px">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody class="text-sm">
-            <tr *ngFor="let data of bookingTable.data" class="border-b border-[var(--theme-border)] transition-colors">
-              <ng-container *ngFor="let col of columns">
-                <td *ngIf="col.visible" 
-                    class="py-4 text-xs bg-transparent border-none" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'"
-                    [class.font-semibold]="col.key === 'guest_name' || col.key === 'amount_paid'"
-                    [class.text-[var(--theme-text-main)]]="col.key === 'check_in' || col.key === 'room_number' || col.key === 'guest_name' || col.key === 'number_of_people' || col.key === 'number_of_days' || col.key === 'check_out'"
-                    [class.text-[var(--theme-text-muted)]]="col.key === 'room_category' || col.key === 'address' || col.key === 'id_number' || col.key === 'phone_number'"
-                    [class.uppercase]="col.key === 'room_category'"
-                    [class.tracking-wider]="col.key === 'room_category'"
-                    [class.max-w-[180px]]="col.key === 'address'"
-                    [class.truncate]="col.key === 'address'"
-                    [title]="col.key === 'address' ? data.address : ''">
-                  
-                  <ng-container [ngSwitch]="col.key">
-                    <span *ngSwitchCase="'check_in'">{{ data.check_in | date:'dd MMM yyyy HH:mm' }}</span>
-                    <span *ngSwitchCase="'room_number'">{{ data.room_number }}</span>
-                    <span *ngSwitchCase="'room_category'">{{ data.room_category || '-' }}</span>
-                    <span *ngSwitchCase="'guest_name'">{{ data.guest_name }}</span>
-                    <span *ngSwitchCase="'address'">{{ data.address || '-' }}</span>
-                    <span *ngSwitchCase="'id_number'">{{ data.id_number || '-' }}</span>
-                    <span *ngSwitchCase="'phone_number'">{{ data.phone_number || '-' }}</span>
-                    <span *ngSwitchCase="'number_of_people'">{{ data.number_of_people || 1 }}</span>
-                    <span *ngSwitchCase="'number_of_days'">{{ data.number_of_days || 1 }}</span>
-                    <span *ngSwitchCase="'amount_paid'" class="text-emerald-400">₹{{ (data.amount_paid || 0) | number }}</span>
-                    <span *ngSwitchCase="'check_out'">{{ (data.status === 'Checked Out' || data.status === 'checked out') && data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : (data.check_out | date:'dd MMM yyyy HH:mm') }}</span>
-                    <span *ngSwitchCase="'actual_checkout'">{{ data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : '-' }}</span>
-                    
-                    <ng-container *ngSwitchCase="'id_documents'">
-                      <button *ngIf="data.id_documents?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:!text-amber-300 hover:!bg-transparent focus:!text-amber-300 focus:!bg-transparent active:!bg-transparent text-xs font-semibold px-2 flex items-center justify-center m-auto transition-colors" (click)="viewAttachments(data.id_documents)">
-                        View ({{data.id_documents.length}})
-                      </button>
-                      <span *ngIf="!data.id_documents?.length" class="text-[var(--theme-text-muted)]">-</span>
-                    </ng-container>
-
-                    <ng-container *ngSwitchCase="'status'">
-                      <nz-select [ngModel]="data.status" 
-                                 (ngModelChange)="updateBookingStatusDirectly(data, $event)" 
-                                 class="w-[130px] custom-dark-select"
-                                 [class.status-confirmed]="data.status === 'Confirmed'"
-                                 [class.status-checked-in]="data.status === 'Checked In'"
-                                 [class.status-checked-out]="data.status === 'Checked Out'">
-                        <nz-option nzValue="Checked In" nzLabel="Check In"></nz-option>
-                        <nz-option nzValue="Checked Out" nzLabel="Check Out"></nz-option>
-                      </nz-select>
-                    </ng-container>
-                  </ng-container>
-
-                </td>
-              </ng-container>
-              <td class="py-4 bg-transparent border-none text-right">
-                <div class="flex items-center justify-end gap-3">
-                  <button *ngIf="data.status === 'Checked In'" 
-                          nz-button nzType="text" 
-                          class="text-rose-500 hover:text-rose-400 transition-colors p-0" 
-                          nz-tooltip nzTooltipTitle="Extend Stay" 
-                          (click)="extendStay(data)">
-                    <span nz-icon nzType="calendar" class="text-base"></span>
-                  </button>
-                  <button nz-button nzType="text" class="text-amber-500 hover:text-amber-400 transition-colors p-0" (click)="openBookingEditModal(data)">
-                    <span nz-icon nzType="edit" class="text-base"></span>
-                  </button>
-                  <button nz-button nzType="text" class="text-rose-500 hover:text-rose-400 transition-colors p-0" nz-popconfirm nzPopconfirmTitle="Are you sure to delete this booking?" (nzOnConfirm)="deleteBooking(data.id)">
-                    <span nz-icon nzType="delete" class="text-base"></span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr *ngIf="filteredBookings.length === 0">
-              <td [attr.colspan]="getVisibleColumnsCount() + 1" class="text-center py-8 text-[var(--theme-text-muted)] bg-transparent border-none">
-                No bookings matches the active filters.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      </div>
-
-      <!-- Popover Content Templates -->
-      <ng-template #checkInFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Check-in Date</span>
-          </div>
-          <div class="mb-4">
-            <nz-date-picker [(ngModel)]="colFilterDate" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" nzFormat="yyyy-MM-dd"></nz-date-picker>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterDate = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #roomNoFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Room No</span>
-          </div>
-          <div class="mb-4">
-            <input nz-input [(ngModel)]="colFilterRoomNo" placeholder="Enter room number..." class="w-full h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]" />
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterRoomNo = ''">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #categoryFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Category</span>
-          </div>
-          <div class="mb-4">
-            <nz-select [(ngModel)]="colFilterCategory" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Category">
-              <nz-option nzValue="" nzLabel="All Categories"></nz-option>
-              <nz-option *ngFor="let type of roomTypes" [nzValue]="type" [nzLabel]="type"></nz-option>
-            </nz-select>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterCategory = ''">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #nameFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Guest Name</span>
-          </div>
-          <div class="mb-4">
-            <input nz-input [(ngModel)]="colFilterName" placeholder="Enter guest name..." class="w-full h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]" />
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterName = ''">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #statusFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Status</span>
-          </div>
-          <div class="mb-4">
-            <nz-select [(ngModel)]="colFilterStatus" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Status">
-              <nz-option nzValue="" nzLabel="All Statuses"></nz-option>
-              <nz-option nzValue="Confirmed" nzLabel="Confirmed"></nz-option>
-              <nz-option nzValue="Checked In" nzLabel="Check In"></nz-option>
-              <nz-option nzValue="Checked Out" nzLabel="Check Out"></nz-option>
-            </nz-select>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterStatus = ''">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-    </div>
-
-    <!-- Add/Edit Booking Modal -->
-    <nz-modal [(nzVisible)]="isBookingModalVisible" 
-              [nzTitle]="bookingModalTitle" 
-              (nzOnCancel)="handleBookingCancel()" 
-              [nzFooter]="bookingModalFooter"
-              [nzWidth]="750">
-      
-      <ng-template #bookingModalTitle>
-        <div class="flex items-center gap-3">
-          <span nz-icon [nzType]="editingBookingId ? 'edit' : 'plus-circle'" class="text-lg" [style.color]="'var(--theme-primary)'"></span>
-          <span class="text-[var(--theme-text-main)] font-semibold uppercase tracking-wider text-xs" style="font-family: 'Hanken Grotesk', sans-serif;">
-            {{ editingBookingId ? 'Edit Booking Entry' : 'New Room Booking' }}
-          </span>
-        </div>
-      </ng-template>
-
-      <ng-template #bookingModalFooter>
-        <div class="flex justify-end gap-3 px-4 py-3">
-          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleBookingCancel()">
-            Cancel
-          </button>
-          <button nz-button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="handleBookingOk()">
-            {{ editingBookingId ? 'Save Entry' : 'Book Room' }}
-          </button>
-        </div>
-      </ng-template>
-
-      <ng-container *nzModalContent>
-        <form nz-form nzLayout="vertical" [formGroup]="bookingForm" class="p-2">
-          <div nz-row [nzGutter]="[16, 12]" class="mt-2">
-            <ng-container *ngFor="let field of popupFields">
-              <div *ngIf="field.visible" nz-col nzXs="24" nzSm="12" [nzMd]="field.key === 'status' || field.key === 'notes' ? 24 : 8">
-                <ng-container [ngSwitch]="field.key">
-                  <!-- Check In -->
-                  <nz-form-item *ngSwitchCase="'check_in'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Check-In Date/Time</nz-form-label>
-                    <nz-form-control nzErrorTip="Please select check-in date/time">
-                      <nz-date-picker formControlName="check_in" [nzShowTime]="{ nzUse12Hours: true, nzFormat: 'hh:mm a' }" nzFormat="yyyy-MM-dd hh:mm a" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Room Number -->
-                  <nz-form-item *ngSwitchCase="'room_number'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Room Number</nz-form-label>
-                    <nz-form-control nzErrorTip="Please enter room number">
-                      <input nz-input formControlName="room_number" placeholder="e.g. 104" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Room Category -->
-                  <nz-form-item *ngSwitchCase="'room_category'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Room Category</nz-form-label>
-                    <nz-form-control>
-                      <nz-select formControlName="room_category" class="w-full h-10 custom-dark-select">
-                        <nz-option nzValue="" nzLabel="-- Select Category --"></nz-option>
-                        <nz-option *ngFor="let type of roomTypes" [nzValue]="type" [nzLabel]="type"></nz-option>
-                      </nz-select>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Guest Name -->
-                  <nz-form-item *ngSwitchCase="'guest_name'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Guest Name</nz-form-label>
-                    <nz-form-control nzErrorTip="Please enter guest name">
-                      <input nz-input formControlName="guest_name" placeholder="Guest Name" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Address -->
-                  <nz-form-item *ngSwitchCase="'address'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Address</nz-form-label>
-                    <nz-form-control>
-                      <input nz-input formControlName="address" placeholder="Guest Address (Optional)" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- ID Number -->
-                  <nz-form-item *ngSwitchCase="'id_number'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">ID Number</nz-form-label>
-                    <nz-form-control>
-                      <input nz-input formControlName="id_number" placeholder="ID Number (Optional)" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Phone Number -->
-                  <nz-form-item *ngSwitchCase="'phone_number'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Phone Number</nz-form-label>
-                    <nz-form-control>
-                      <input nz-input formControlName="phone_number" placeholder="Phone Number (Optional)" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Number of People -->
-                  <nz-form-item *ngSwitchCase="'number_of_people'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Number of People</nz-form-label>
-                    <nz-form-control nzErrorTip="Please enter number of guests">
-                      <nz-input-number formControlName="number_of_people" [nzMin]="1" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="1"></nz-input-number>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Number of Days -->
-                  <nz-form-item *ngSwitchCase="'number_of_days'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Number of Days</nz-form-label>
-                    <nz-form-control nzErrorTip="Please enter number of days">
-                      <nz-input-number formControlName="number_of_days" [nzMin]="1" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="1"></nz-input-number>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Amount Paid -->
-                  <nz-form-item *ngSwitchCase="'amount_paid'" class="mb-0">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Amount Paid</nz-form-label>
-                    <nz-form-control>
-                      <nz-input-number formControlName="amount_paid" [nzMin]="0" [nzStep]="100" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="0.00"></nz-input-number>
-                    </nz-form-control>
-                  </nz-form-item>
-
-                  <!-- Check Out -->
-                  <nz-form-item *ngSwitchCase="'check_out'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Check-Out Date/Time</nz-form-label>
-                    <nz-form-control nzErrorTip="Please select check-out date/time">
-                      <nz-date-picker formControlName="check_out" [nzShowTime]="{ nzUse12Hours: true, nzFormat: 'hh:mm a' }" nzFormat="yyyy-MM-dd hh:mm a" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
-                    </nz-form-control>
-                  </nz-form-item>
-
-
-                  <!-- Status -->
-                  <nz-form-item *ngSwitchCase="'status'" class="mb-0">
-                    <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Booking Status</nz-form-label>
-                    <nz-form-control>
-                      <nz-radio-group formControlName="status" class="flex flex-wrap gap-4 mt-2 premium-status-radio">
-                        <label nz-radio nzValue="Confirmed" class="status-radio-confirmed">Confirmed (Reserved)</label>
-                        <label nz-radio nzValue="Checked In" class="status-radio-active">Checked In (Active)</label>
-                        <label nz-radio nzValue="Checked Out" class="status-radio-completed">Checked Out</label>
-                      </nz-radio-group>
-                    </nz-form-control>
-                  </nz-form-item>
-                </ng-container>
-              </div>
-            </ng-container>
-          </div>
-
-          <!-- ID Documents Upload -->
-          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
-            <div nz-col nzSpan="24">
-              <nz-form-item class="mb-0">
-                <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">ID Documents (Optional)</nz-form-label>
-                <nz-form-control>
-                  <nz-upload
-                    nzType="drag"
-                    [nzMultiple]="true"
-                    nzAccept="image/*,application/pdf"
-                    [nzBeforeUpload]="beforeUpload"
-                    [(nzFileList)]="fileList"
-                    class="dark-theme-upload">
-                    <p class="ant-upload-drag-icon">
-                      <span nz-icon nzType="camera" class="text-[var(--theme-primary)] text-3xl"></span>
-                    </p>
-                    <p class="ant-upload-text text-[var(--theme-text-main)] font-medium mt-2">Tap to Take Photo or Upload</p>
-                    <p class="ant-upload-hint text-[var(--theme-text-muted)] text-xs mt-1">Supports camera capture, images, and PDFs.</p>
-                  </nz-upload>
-                </nz-form-control>
-              </nz-form-item>
-            </div>
-          </div>
-        </form>
-      </ng-container>
-    </nz-modal>
-
-    <!-- SQL Copy Modal -->
-    <nz-modal [(nzVisible)]="isSqlModalVisible" 
-              nzTitle="Supabase SQL Setup" 
-              (nzOnCancel)="closeSqlModal()" 
-              [nzFooter]="sqlModalFooter"
-              [nzWidth]="650">
-      
-      <ng-template #sqlModalFooter>
-        <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider" (click)="closeSqlModal()">
-          Close
-        </button>
-      </ng-template>
-
-      <ng-container *nzModalContent>
-        <p class="text-xs text-[var(--theme-text-muted)] mb-4">
-          Copy and execute the following SQL code inside your Supabase SQL Editor to create the table and enable Row Level Security (RLS).
-        </p>
-        <pre class="bg-zinc-950 p-4 rounded-xl text-xs overflow-x-auto text-amber-400 border border-[var(--theme-border)] select-all font-mono" style="max-height: 350px;">{{ sqlCode }}</pre>
-      </ng-container>
-    </nz-modal>
-
-    <!-- Attachments Viewer Modal -->
-    <nz-modal [(nzVisible)]="isAttachmentModalVisible" 
-              nzTitle="View Attachments" 
-              (nzOnCancel)="isAttachmentModalVisible = false" 
-              [nzFooter]="null"
-              [nzWidth]="800">
-      <ng-container *nzModalContent>
-        <div class="flex flex-col gap-4">
-          <div *ngIf="isLoadingAttachments" class="flex justify-center p-8">
-            <span nz-icon nzType="loading" nzTheme="outline" class="text-4xl text-[var(--theme-primary)]"></span>
-          </div>
-          <div *ngIf="!isLoadingAttachments && attachmentUrls.length === 0" class="text-center text-[var(--theme-text-muted)] p-8">
-            No valid attachments found or links expired.
-          </div>
-          <div *ngIf="!isLoadingAttachments && attachmentUrls.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
-            <div *ngFor="let url of attachmentUrls" class="border border-[var(--theme-border)] rounded-xl overflow-hidden bg-black/40 flex flex-col items-center justify-center p-4 relative group min-h-[200px]">
-               
-               <!-- File Preview (Image) -->
-               <img *ngIf="!url.includes('.pdf')" [src]="url" class="max-w-full max-h-[300px] object-contain rounded-lg transition-transform duration-300 group-hover:scale-105" alt="Attachment" (error)="onImageError($event)" />
-               
-               <!-- File Preview (PDF) -->
-               <div *ngIf="url.includes('.pdf')" class="flex flex-col items-center justify-center h-[200px] w-full bg-zinc-900/50 rounded-lg">
-                 <span nz-icon nzType="file-pdf" class="text-6xl text-rose-500 mb-3"></span>
-                 <span class="text-sm font-semibold text-[var(--theme-text-main)]">PDF Document</span>
-               </div>
-
-               <!-- Download / View Link Overlay -->
-               <a [href]="url" target="_blank" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col gap-2 items-center justify-center transition-opacity text-white hover:text-[var(--theme-primary)]">
-                 <span nz-icon nzType="eye" class="text-3xl mb-1"></span>
-                 <span class="text-xs font-bold uppercase tracking-widest bg-black/50 px-3 py-1 rounded-full border border-white/20">Click to Open</span>
-               </a>
-            </div>
-          </div>
-          
-
-        </div>
-      </ng-container>
-    </nz-modal>
-  `,
-  styles: [`
-    /* Status Radio Button Custom Styling */
-    ::ng-deep .premium-status-radio .ant-radio-checked .ant-radio-inner { border-color: var(--theme-primary) !important; }
-    ::ng-deep .premium-status-radio .ant-radio-inner::after { background-color: var(--theme-primary) !important; }
-    ::ng-deep .premium-status-radio .ant-radio-wrapper:hover .ant-radio-inner { border-color: var(--theme-primary-dark) !important; }
-    
-    ::ng-deep .premium-status-radio .ant-radio-wrapper { color: var(--theme-text-main) !important; font-weight: 500; }
-    ::ng-deep .premium-status-radio .ant-radio-inner { background-color: transparent !important; border-color: var(--theme-border) !important; }
-
-    ::ng-deep .custom-dark-select.status-confirmed .ant-select-selector {
-      color: #fbbf24 !important;
-      border-color: rgba(251, 191, 36, 0.3) !important;
-      background-color: rgba(251, 191, 36, 0.05) !important;
-    }
-    ::ng-deep .custom-dark-select.status-checked-in .ant-select-selector {
-      color: #34d399 !important;
-      border-color: rgba(52, 211, 153, 0.3) !important;
-      background-color: rgba(52, 211, 153, 0.05) !important;
-    }
-    ::ng-deep .custom-dark-select.status-checked-out .ant-select-selector {
-      color: #a1a1aa !important;
-      border-color: rgba(161, 161, 170, 0.3) !important;
-      background-color: rgba(161, 161, 170, 0.05) !important;
-    }
-    ::ng-deep .ant-popover-inner {
-      background-color: var(--theme-card) !important;
-      border: 1px solid var(--theme-border) !important;
-      border-radius: 12px !important;
-      box-shadow: 0 10px 25px -5px var(--theme-shadow-heavy) !important;
-    }
-    ::ng-deep .ant-popover-inner-content {
-      padding: 0 !important;
-      color: var(--theme-text-main) !important;
-    }
-    ::ng-deep .ant-popover-arrow-content {
-      background-color: var(--theme-card) !important;
-      border-color: var(--theme-border) !important;
-    }
-  `]
+  templateUrl: './bookings.component.html',
+  styleUrls: ['./bookings.component.css']
 })
 export class BookingsComponent implements OnInit, OnDestroy {
   bookings: any[] = [];
@@ -655,30 +93,224 @@ export class BookingsComponent implements OnInit, OnDestroy {
   columns: ColumnConfig[] = [...DEFAULT_BOOKING_COLUMNS];
   popupFields: ColumnConfig[] = [...DEFAULT_BOOKING_COLUMNS];
   private bookingsSub?: Subscription;
+  guestSearchQuery: string = '';
+  selectedGuests: any[] = [];
+
+  sortColumn = 'check_in';
+  sortDirection = 'desc';
+  isMandatoryCheckEnabled = false;
 
   get hotelName(): string {
     const profile = this.supabase.currentProfile;
     return profile?.hotel_name || 'Room Bookings';
   }
 
-  // Computed statistics getters
+  get dateFilteredBookings(): any[] {
+    return this.bookings.filter(b => {
+      // 1. Global Date Range Filter
+      let matchesGlobalDate = true;
+      if (this.globalDateRange && this.globalDateRange.length === 2) {
+        const start = new Date(this.globalDateRange[0]);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(this.globalDateRange[1]);
+        end.setHours(23, 59, 59, 999);
+
+        const checkIn = b.check_in ? new Date(b.check_in) : null;
+        let checkOut = b.check_out ? new Date(b.check_out) : null;
+        if ((b.status === 'Checked Out' || b.status === 'checked out') && b.actual_checkout) {
+          checkOut = new Date(b.actual_checkout);
+        }
+
+        if (checkIn && checkOut) {
+          matchesGlobalDate = checkIn <= end && checkOut >= start;
+        } else {
+          matchesGlobalDate = false;
+        }
+      }
+      return matchesGlobalDate;
+    });
+  }
+
+  get allConfiguredRooms(): string[] {
+    const rooms: string[] = [];
+    if (this.roomConfig) {
+      Object.keys(this.roomConfig).forEach(key => {
+        if (key !== '_order') {
+          const val = this.roomConfig[key];
+          if (Array.isArray(val)) {
+            rooms.push(...val.map(r => String(r)));
+          }
+        }
+      });
+    }
+    return rooms;
+  }
+
+  get occupiedRooms(): string[] {
+    return this.bookings
+      .filter(b => b.status === 'Checked In' || b.status === 'Active')
+      .map(b => String(b.room_number))
+      .filter(Boolean);
+  }
+
+  get confirmedTodayRooms(): string[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return this.bookings
+      .filter(b => {
+        if (b.status !== 'Confirmed' && b.status !== 'confirmed') return false;
+        if (!b.check_in) return false;
+        const checkIn = new Date(b.check_in);
+        return checkIn >= today && checkIn < tomorrow;
+      })
+      .map(b => String(b.room_number))
+      .filter(Boolean);
+  }
+
+  isRoomConfirmedToday(room: string): boolean {
+    return this.confirmedTodayRooms.includes(String(room));
+  }
+
+  get availableRoomsList(): string[] {
+    const all = this.allConfiguredRooms;
+    const occupied = this.occupiedRooms;
+    return all.filter(r => !occupied.includes(r));
+  }
+
+  getRoomsByCategory(category: string): string[] {
+    if (!this.roomConfig || !category) return [];
+    const val = this.roomConfig[category];
+    if (Array.isArray(val)) {
+      return val.map(r => String(r));
+    }
+    return [];
+  }
+
+  isRoomOccupied(room: string): boolean {
+    return this.occupiedRooms.includes(String(room));
+  }
+
+  getCategories(): string[] {
+    return this.allConfiguredRooms.length > 0 ? this.roomTypes : [];
+  }
+
+  onRoomCardClick(room: string, category: string): void {
+    if (this.isRoomOccupied(room)) {
+      // Find the active booking for this room and open it for viewing/editing
+      const activeBooking = this.bookings.find(b =>
+        (b.status === 'Checked In' || b.status === 'Active') && String(b.room_number) === String(room)
+      );
+      if (activeBooking) {
+        this.openBookingEditModal(activeBooking);
+      } else {
+        this.message.info(`Room ${room} is currently marked occupied.`);
+      }
+      return;
+    }
+
+    if (this.isRoomConfirmedToday(room)) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const confirmedBooking = this.bookings.find(b => 
+        (b.status === 'Confirmed' || b.status === 'confirmed') && 
+        String(b.room_number) === String(room) &&
+        b.check_in && new Date(b.check_in) >= today && new Date(b.check_in) < tomorrow
+      );
+      if (confirmedBooking) {
+        this.openBookingEditModal(confirmedBooking);
+        return;
+      }
+    }
+
+    // Room is available, open add modal prefilled with room & category
+    this.openBookingAddModalWithRoom(room, category);
+  }
+
+  openBookingAddModalWithRoom(room: string, category: string): void {
+    this.openBookingAddModal(); // Resets the form and opens it
+    // Now patch the category
+    this.bookingForm.patchValue({ room_category: category }, { emitEvent: true });
+    // Wait for the room_category value change listener to clear the room, then patch room
+    setTimeout(() => {
+      this.bookingForm.patchValue({ room_number: String(room) }, { emitEvent: false });
+    }, 10);
+  }
+
+  get totalRooms(): number {
+    const allRooms = this.allConfiguredRooms;
+    if (allRooms.length > 0) {
+      return allRooms.length;
+    }
+    let total = 0;
+    if (this.roomConfig) {
+      Object.keys(this.roomConfig).forEach(key => {
+        if (key !== '_order') {
+          total += Array.isArray(this.roomConfig[key]) ? this.roomConfig[key].length : Number(this.roomConfig[key] || 0);
+        }
+      });
+    }
+    return total > 0 ? total : 0;
+  }
+
+  get availableRooms(): number {
+    const allRooms = this.allConfiguredRooms;
+    if (allRooms.length > 0) {
+      return Math.max(0, allRooms.length - this.occupiedRooms.length);
+    }
+    return Math.max(0, this.totalRooms - this.activeCheckedInCount);
+  }
+
+  // Computed statistics getters (based ONLY on date filter)
   get totalGuestsRegistered(): number {
-    return this.filteredBookings.reduce((sum, b) => sum + Number(b.number_of_people || 0), 0);
+    return this.dateFilteredBookings.reduce((sum, b) => sum + Number(b.number_of_people || 0), 0);
   }
 
   get activeCheckedInCount(): number {
-    return this.filteredBookings.filter(b => b.status === 'Checked In' || b.status === 'Active').length;
+    return this.dateFilteredBookings.filter(b => b.status === 'Checked In' || b.status === 'Active').length;
   }
 
-  get totalBookingRevenue(): number {
-    return this.filteredBookings.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0);
+  get activeCheckedOutCount(): number {
+    return this.dateFilteredBookings.filter(b => b.status === 'Checked Out' || b.status === 'checked out').length;
   }
 
-  get averageDurationOfStay(): number {
-    const valid = this.filteredBookings.filter(b => Number(b.number_of_days || 0) > 0);
-    return valid.length > 0 
-      ? parseFloat((valid.reduce((sum, b) => sum + Number(b.number_of_days), 0) / valid.length).toFixed(1))
-      : 0;
+  get expectedBookings(): number {
+    // 1. Calculate historical average bookings per day
+    const allBookings = this.bookings;
+    if (allBookings.length === 0) return 0;
+
+    // Find min and max date in historical data to calculate total days span
+    const checkInDates = allBookings.map(b => new Date(b.check_in).getTime());
+    const minDate = new Date(Math.min(...checkInDates));
+    const maxDate = new Date(Math.max(...checkInDates));
+    const totalDaysSpan = DateUtils.getDaysBetween(minDate, maxDate);
+    const avgBookingsPerDay = allBookings.length / totalDaysSpan;
+
+    // 2. Count existing bookings in the selected date range
+    const existingBookings = this.dateFilteredBookings.length;
+
+    // 3. Estimate how many days are left in the selected date range
+    let daysRemaining = 0;
+    if (this.globalDateRange && this.globalDateRange.length === 2) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const end = new Date(this.globalDateRange[1]);
+      end.setHours(23, 59, 59, 999);
+
+      if (end > today) {
+        // Calculate days between today and end date
+        daysRemaining = DateUtils.getDaysBetween(today, end, 0);
+      }
+    }
+
+    // Expected Bookings = existing bookings + (days remaining * average bookings per day)
+    const expectedAdditional = Math.round(daysRemaining * avgBookingsPerDay);
+    return existingBookings + expectedAdditional;
   }
 
 
@@ -692,28 +324,54 @@ export class BookingsComponent implements OnInit, OnDestroy {
     id_number TEXT NOT NULL,
     room_number TEXT NOT NULL,
     room_category TEXT NOT NULL,
+    booking_source TEXT,
     address TEXT,
     check_in TIMESTAMPTZ NOT NULL,
     check_out TIMESTAMPTZ NOT NULL,
     actual_checkout TIMESTAMPTZ,
     number_of_days INTEGER DEFAULT 1,
     number_of_people INTEGER DEFAULT 1,
-    amount_paid NUMERIC DEFAULT 0,
+    amount_paid NUMERIC DEFAULT 0 CHECK (amount_paid >= 0),
     status TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
+    created_at TIMESTAMPTZ DEFAULT now(),
+    CONSTRAINT check_stay_dates CHECK (check_out > check_in)
 );
-
--- If your table already exists, run this query to add the column:
--- ALTER TABLE public.room_bookings ADD COLUMN IF NOT EXISTS actual_checkout TIMESTAMPTZ;
 
 -- Enable RLS
 ALTER TABLE public.room_bookings ENABLE ROW LEVEL SECURITY;
 
+-- Helper security functions
+CREATE OR REPLACE FUNCTION get_user_hotel_id() RETURNS UUID AS $$
+  SELECT hotel_id FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION get_user_role() RETURNS TEXT AS $$
+  SELECT role FROM public.profiles WHERE id = auth.uid();
+$$ LANGUAGE sql SECURITY DEFINER;
+
 -- Create Policies
-CREATE POLICY "Allow public select" ON public.room_bookings FOR SELECT USING (true);
-CREATE POLICY "Allow public insert" ON public.room_bookings FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public update" ON public.room_bookings FOR UPDATE USING (true);
-CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (true);`;
+CREATE POLICY "View bookings" ON public.room_bookings FOR SELECT TO authenticated USING (hotel_id = get_user_hotel_id());
+CREATE POLICY "Create bookings" ON public.room_bookings FOR INSERT TO authenticated WITH CHECK (hotel_id = get_user_hotel_id());
+CREATE POLICY "Update bookings" ON public.room_bookings FOR UPDATE TO authenticated USING (hotel_id = get_user_hotel_id()) WITH CHECK (hotel_id = get_user_hotel_id());
+CREATE POLICY "Delete bookings" ON public.room_bookings FOR DELETE TO authenticated USING (hotel_id = get_user_hotel_id() AND get_user_role() IN ('Admin', 'Manager'));
+
+-- Guest Profiles Table
+CREATE TABLE IF NOT EXISTS public.guests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    hotel_id UUID REFERENCES public.hotels(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phone_number TEXT NOT NULL,
+    id_number TEXT,
+    address TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.guests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "View guests" ON public.guests FOR SELECT TO authenticated USING (hotel_id = get_user_hotel_id());
+CREATE POLICY "Create guests" ON public.guests FOR INSERT TO authenticated WITH CHECK (hotel_id = get_user_hotel_id());
+CREATE POLICY "Update guests" ON public.guests FOR UPDATE TO authenticated USING (hotel_id = get_user_hotel_id()) WITH CHECK (hotel_id = get_user_hotel_id());
+CREATE POLICY "Delete guests" ON public.guests FOR DELETE TO authenticated USING (hotel_id = get_user_hotel_id() AND get_user_role() IN ('Admin', 'Manager'));`;
 
   // Booking Modal State
   isBookingModalVisible = false;
@@ -722,6 +380,13 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   editingBookingId: string | null = null;
   fileList: NzUploadFile[] = [];
   isUploadingFiles = false;
+
+  // Guest Modal State
+  isGuestModalVisible = false;
+  isGuestOkLoading = false;
+  guestForm: FormGroup;
+  guestSearchResults: any[] = [];
+  guestSearchTimer: any;
 
   // Attachment Viewer State
   isAttachmentModalVisible = false;
@@ -745,19 +410,33 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     private fb: FormBuilder,
     private message: NzMessageService
   ) {
+    this.guestForm = this.fb.group({
+      name: ['', [Validators.required]],
+      phone_number: ['+91 ', [Validators.required, Validators.pattern(/^\+91\s?[0-9]{10}$/)]],
+      id_number: [''],
+      id_type: ['Aadhar Card'],
+      address: ['']
+    });
+
     this.bookingForm = this.fb.group({
       guest_name: ['', [Validators.required]],
       phone_number: [''],
       id_number: [''],
       room_number: ['', [Validators.required]],
       room_category: [''],
+      booking_source: [''],
+      pincode: [''],
       address: [''],
       check_in: [null, [Validators.required]],
       check_out: [null, [Validators.required]],
       number_of_days: [1, [Validators.required, Validators.min(1)]],
       number_of_people: [1, [Validators.required, Validators.min(1)]],
+      total_amount: [null, [Validators.min(0)]],
       amount_paid: [null, [Validators.min(0)]],
-      status: ['Checked In', [Validators.required]]
+      status: ['Checked In', [Validators.required]],
+      gst_number: [''],
+      company_name: [''],
+      notes: ['']
     });
 
     this.setupFormValueChanges();
@@ -766,7 +445,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       if (profile) {
         if (profile.room_config) {
           this.roomConfig = profile.room_config;
-          
+
           if (this.roomConfig._order && Array.isArray(this.roomConfig._order)) {
             this.roomTypes = this.roomConfig._order.filter((key: string) => key in this.roomConfig);
             Object.keys(this.roomConfig).forEach(key => {
@@ -789,6 +468,10 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
             // New nested format
             if (config.table) this.applySavedColumns(config.table);
             if (config.popup) this.applySavedPopupFields(config.popup);
+            this.sortColumn = config.sort_column || 'check_in';
+            this.sortDirection = config.sort_direction || 'desc';
+            this.isMandatoryCheckEnabled = config.mandatory_edit_check || false;
+            this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
           }
         } else {
           const local = localStorage.getItem('bookings_column_config');
@@ -801,8 +484,12 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
               } else {
                 if (parsed.table) this.applySavedColumns(parsed.table);
                 if (parsed.popup) this.applySavedPopupFields(parsed.popup);
+                this.sortColumn = parsed.sort_column || 'check_in';
+                this.sortDirection = parsed.sort_direction || 'desc';
+                this.isMandatoryCheckEnabled = parsed.mandatory_edit_check || false;
+                this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         }
 
@@ -817,18 +504,19 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     const newCols: ColumnConfig[] = [];
     const colMap = new Map<string, ColumnConfig>();
     this.columns.forEach(c => colMap.set(c.key, c));
-    
+
     savedList.forEach((s: any) => {
       const existing = colMap.get(s.key);
       if (existing) {
         newCols.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         colMap.delete(s.key);
       }
     });
-    
+
     colMap.forEach(c => newCols.push(c));
     this.columns = newCols;
   }
@@ -836,11 +524,11 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   moveColumn(index: number, direction: 'left' | 'right'): void {
     const targetIndex = direction === 'left' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= this.columns.length) return;
-    
+
     const temp = this.columns[index];
     this.columns[index] = this.columns[targetIndex];
     this.columns[targetIndex] = temp;
-    
+
     this.columns = [...this.columns];
     this.saveColumnConfig();
   }
@@ -859,25 +547,113 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     const newFields: ColumnConfig[] = [];
     const fieldMap = new Map<string, ColumnConfig>();
     this.popupFields.forEach(f => fieldMap.set(f.key, f));
-    
+
     savedList.forEach((s: any) => {
       const existing = fieldMap.get(s.key);
       if (existing) {
         newFields.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         fieldMap.delete(s.key);
       }
     });
-    
+
     fieldMap.forEach(f => newFields.push(f));
     this.popupFields = newFields;
+    this.applyMandatoryChecks(false);
+  }
+
+  isColumnMandatory(key: string): boolean {
+    const col = this.popupFields?.find(c => c.key === key);
+    return col ? col.mandatory === true : false;
+  }
+
+  isFieldVisible(key: string): boolean {
+    const field = this.popupFields?.find(c => c.key === key);
+    return field ? field.visible === true : false;
+  }
+
+  getFieldSpan(key: string): number {
+    switch (key) {
+      case 'guest_name':
+        return 12;
+      case 'room_category':
+      case 'room_number':
+      case 'check_in':
+      case 'check_out':
+        return 6;
+      case 'number_of_people':
+      case 'number_of_days':
+      case 'amount_paid':
+      case 'total_amount':
+        return 4;
+      case 'booking_source':
+        return 8;
+      case 'company_name':
+      case 'gst_number':
+        return 12;
+      case 'status':
+        return 16;
+      case 'notes':
+        return 24;
+      default:
+        return 6;
+    }
+  }
+
+  applyMandatoryChecks(mandatory: boolean): void {
+    if (!this.popupFields || this.popupFields.length === 0) return;
+
+    this.popupFields.forEach(col => {
+      const isMandatory = col.mandatory === true;
+
+      // Update bookingForm validators
+      const bControl = this.bookingForm?.get(col.key);
+      if (bControl) {
+        if (isMandatory) {
+          if (col.key === 'number_of_days' || col.key === 'number_of_people') {
+            bControl.setValidators([Validators.required, Validators.min(1)]);
+          } else if (col.key === 'amount_paid') {
+            bControl.setValidators([Validators.required, Validators.min(0)]);
+          } else {
+            bControl.setValidators([Validators.required]);
+          }
+        } else {
+          bControl.clearValidators();
+          if (col.key === 'amount_paid') {
+            bControl.setValidators([Validators.min(0)]);
+          }
+        }
+        bControl.updateValueAndValidity();
+      }
+
+      // Update guestForm validators (map column key to guest form field)
+      let guestKey = col.key;
+      if (col.key === 'guest_name') guestKey = 'name';
+      const gControl = this.guestForm?.get(guestKey);
+      if (gControl) {
+        if (isMandatory) {
+          if (guestKey === 'phone_number') {
+            gControl.setValidators([Validators.required, Validators.pattern(/^\+91\s?[0-9]{10}$/)]);
+          } else {
+            gControl.setValidators([Validators.required]);
+          }
+        } else {
+          gControl.clearValidators();
+          if (guestKey === 'phone_number') {
+            gControl.setValidators([Validators.pattern(/^\+91\s?[0-9]{10}$/)]);
+          }
+        }
+        gControl.updateValueAndValidity();
+      }
+    });
   }
 
   async saveColumnConfig(): Promise<void> {
-    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible }));
-    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible }));
+    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory }));
+    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible, mandatory: f.mandatory }));
     const combined = { table: tableConfig, popup: popupConfig };
 
     const profile = this.supabase.currentProfile;
@@ -885,15 +661,15 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       localStorage.setItem('bookings_column_config', JSON.stringify(combined));
       return;
     }
-    
+
     const currentConfig = profile.column_config || {};
     const newConfig = {
       ...currentConfig,
       bookings: combined
     };
-    
+
     localStorage.setItem('bookings_column_config', JSON.stringify(combined));
-    
+
     try {
       await this.supabase.updateHotelColumnConfig(profile.hotel_id, newConfig);
     } catch (e) {
@@ -956,14 +732,14 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   activePresetRange: string = 'Today';
 
   hasActiveFilters(): boolean {
-    return !!this.globalDateRange?.length || 
-           this.activeQuickFilter !== 'check-in' || 
-           !!this.colFilterDate || 
-           !!this.colFilterRoomNo || 
-           !!this.colFilterCategory || 
-           !!this.colFilterName || 
-           !!this.colFilterStatus || 
-           this.activePresetRange !== 'Today';
+    return !!this.globalDateRange?.length ||
+      this.activeQuickFilter !== 'check-in' ||
+      !!this.colFilterDate ||
+      !!this.colFilterRoomNo ||
+      !!this.colFilterCategory ||
+      !!this.colFilterName ||
+      !!this.colFilterStatus ||
+      this.activePresetRange !== 'Today';
   }
 
   applyPresetRange(preset: string): void {
@@ -995,11 +771,12 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   setQuickFilter(filter: string): void {
     if (this.activeQuickFilter === filter) {
       this.activeQuickFilter = '';
+      setTimeout(() => this.updateCharts(), 50);
       return;
     }
 
     this.activeQuickFilter = filter;
-
+    setTimeout(() => this.updateCharts(), 50);
   }
 
   onGlobalFilterChange(): void {
@@ -1008,6 +785,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       // Optional: clear quick filter on custom date
       this.activeQuickFilter = '';
     }
+    setTimeout(() => this.updateCharts(), 50);
   }
 
   ngOnDestroy(): void {
@@ -1022,8 +800,22 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   colFilterName = '';
   colFilterStatus = '';
 
+  // Chart Options
+  sparklineCheckins!: Partial<ChartOptions>;
+  sparklineGuests!: Partial<ChartOptions>;
+  sparklineRevenue!: Partial<ChartOptions>;
+  sparklineDuration!: Partial<ChartOptions>;
+  sparklineCheckout!: Partial<ChartOptions>;
+  sparklineExpectedBookings!: Partial<ChartOptions>;
+  paceRevenueChartOptions!: Partial<ChartOptions>;
+  statusChartOptions!: Partial<ChartOptions>;
+
+  onFilterChange(): void {
+    setTimeout(() => this.updateCharts(), 50);
+  }
+
   get filteredBookings(): any[] {
-    return this.bookings.filter(b => {
+    const list = this.bookings.filter(b => {
       // 1. Global Date Range Filter
       let matchesGlobalDate = true;
       if (this.globalDateRange && this.globalDateRange.length === 2) {
@@ -1031,13 +823,13 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
         start.setHours(0, 0, 0, 0);
         const end = new Date(this.globalDateRange[1]);
         end.setHours(23, 59, 59, 999);
-        
+
         const checkIn = b.check_in ? new Date(b.check_in) : null;
         let checkOut = b.check_out ? new Date(b.check_out) : null;
         if ((b.status === 'Checked Out' || b.status === 'checked out') && b.actual_checkout) {
           checkOut = new Date(b.actual_checkout);
         }
-        
+
         if (checkIn && checkOut) {
           matchesGlobalDate = checkIn <= end && checkOut >= start;
         } else {
@@ -1071,17 +863,43 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
         matchesDate = selDate >= checkInDate && selDate <= checkOutDate;
       }
 
-      const matchesRoomNo = !this.colFilterRoomNo || 
+      const matchesRoomNo = !this.colFilterRoomNo ||
         b.room_number?.toLowerCase().includes(this.colFilterRoomNo.toLowerCase());
 
       const matchesCategory = !this.colFilterCategory || b.room_category === this.colFilterCategory;
 
-      const matchesName = !this.colFilterName || 
+      const matchesName = !this.colFilterName ||
         b.guest_name?.toLowerCase().includes(this.colFilterName.toLowerCase());
 
       const matchesStatus = !this.colFilterStatus || b.status === this.colFilterStatus;
 
       return matchesDate && matchesRoomNo && matchesCategory && matchesName && matchesStatus;
+    });
+
+    const sortCol = this.sortColumn || 'check_in';
+    const sortDir = this.sortDirection || 'desc';
+
+    return list.sort((a, b) => {
+      let valA = a[sortCol];
+      let valB = b[sortCol];
+
+      if (sortCol === 'check_in' || sortCol === 'check_out' || sortCol === 'created_at') {
+        const timeA = valA ? new Date(valA).getTime() : 0;
+        const timeB = valB ? new Date(valB).getTime() : 0;
+        return sortDir === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      if (sortCol === 'amount_paid' || sortCol === 'number_of_people' || sortCol === 'number_of_days') {
+        const numA = Number(valA || 0);
+        const numB = Number(valB || 0);
+        return sortDir === 'asc' ? numA - numB : numB - numA;
+      }
+
+      const strA = String(valA || '').toLowerCase();
+      const strB = String(valB || '').toLowerCase();
+      if (strA < strB) return sortDir === 'asc' ? -1 : 1;
+      if (strA > strB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
     });
   }
 
@@ -1093,6 +911,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     this.colFilterStatus = '';
     this.activeQuickFilter = 'check-in';
     this.applyPresetRange('Today');
+    setTimeout(() => this.updateCharts(), 50);
   }
 
   getBookingsKey(): string {
@@ -1103,11 +922,17 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
   async loadBookings(): Promise<void> {
     try {
-      const client = this.supabase.getClient();
-      const { data, error } = await client
-        .from('room_bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const profile = this.supabase.currentProfile;
+      const hotelId = profile?.hotel_id;
+
+      let queryResult;
+      if (hotelId) {
+        queryResult = await this.supabase.getRoomBookings(hotelId);
+      } else {
+        queryResult = await this.supabase.getRoomBookings();
+      }
+
+      const { data, error } = queryResult;
 
       if (error) {
         if (error.message.includes('relation') || error.message.includes('does not exist') || error.message.includes('schema cache')) {
@@ -1128,6 +953,8 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       console.error('Failed to load bookings from Supabase, falling back to local storage', e);
       this.isDatabaseLinked = false;
       this.loadLocalBookings();
+    } finally {
+      setTimeout(() => this.updateCharts(), 50);
     }
   }
 
@@ -1148,7 +975,250 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     } catch (e) {
       console.error('Failed to load bookings from local storage', e);
       this.bookings = [];
+    } finally {
+      setTimeout(() => this.updateCharts(), 50);
     }
+  }
+
+  updateCharts(): void {
+    const bks = [...this.dateFilteredBookings].reverse(); // oldest to newest
+
+    if (bks.length === 0) {
+      this.sparklineCheckins = undefined as any;
+      this.sparklineGuests = undefined as any;
+      this.sparklineRevenue = undefined as any;
+      this.sparklineDuration = undefined as any;
+      this.sparklineCheckout = undefined as any;
+      this.sparklineExpectedBookings = undefined as any;
+      this.paceRevenueChartOptions = undefined as any;
+      this.statusChartOptions = undefined as any;
+      return;
+    }
+
+    // We create daily aggregated data for Pace & Revenue chart
+    const dailyMap = new Map<string, { bookings: number, revenue: number }>();
+    bks.forEach(b => {
+      const dateStr = new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      if (!dailyMap.has(dateStr)) dailyMap.set(dateStr, { bookings: 0, revenue: 0 });
+      const stat = dailyMap.get(dateStr)!;
+      stat.bookings += 1;
+      stat.revenue += Number(b.amount_paid || 0);
+    });
+    const dailyKeys = Array.from(dailyMap.keys());
+    const dailyBookings = dailyKeys.map(k => dailyMap.get(k)!.bookings);
+    const dailyRevenues = dailyKeys.map(k => dailyMap.get(k)!.revenue);
+
+    // Common sparkline template
+    const baseSparkline: Partial<ChartOptions> = {
+      chart: { type: 'area', width: '100%', height: 48, sparkline: { enabled: true }, animations: { enabled: false } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.0, stops: [0, 100] } },
+      tooltip: { fixed: { enabled: false }, x: { show: false }, y: { title: { formatter: function () { return '' } } }, marker: { show: false } }
+    };
+
+    this.sparklineCheckins = {
+      ...baseSparkline,
+      series: [{ name: 'Bookings', data: dailyBookings }],
+      colors: ['#3b82f6'] // Blue
+    };
+
+    const guestsData = bks.map(b => Number(b.number_of_people || 1));
+    this.sparklineGuests = {
+      ...baseSparkline,
+      series: [{ name: 'Guests', data: guestsData }],
+      colors: ['#10b981'] // Emerald
+    };
+
+    // Calculate historical average rate for sparkline expected income estimations
+    const pastCheckedOut = this.bookings.filter(b =>
+      (b.status === 'Checked Out' || b.status === 'checked out') && Number(b.amount_paid || 0) > 0
+    );
+    const avgRate = pastCheckedOut.length > 0
+      ? pastCheckedOut.reduce((sum, b) => sum + Number(b.amount_paid || 0), 0) / pastCheckedOut.length
+      : 1800;
+
+    // Aggregates for Checked Out and Expected Bookings sparklines
+    const dailyCheckouts = dailyKeys.map(k => {
+      return bks.filter(b => {
+        const dStr = new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return dStr === k && (b.status === 'Checked Out' || b.status === 'checked out');
+      }).length;
+    });
+
+    const dailyExpectedBookingsData = dailyKeys.map(k => {
+      return bks.filter(b => {
+        const dStr = new Date(b.check_in).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return dStr === k;
+      }).length;
+    });
+
+    this.sparklineCheckout = {
+      ...baseSparkline,
+      series: [{ name: 'Checked Out', data: dailyCheckouts }],
+      colors: ['#f43f5e'] // Rose
+    };
+
+    this.sparklineExpectedBookings = {
+      ...baseSparkline,
+      series: [{ name: 'Est. Bookings', data: dailyExpectedBookingsData }],
+      colors: ['#ffe082'] // Gold
+    };
+
+    const labelColor = '#94a3b8';
+
+    // Bookings Pace & Revenue Chart
+    this.paceRevenueChartOptions = {
+      series: [
+        { name: 'Revenue (₹)', type: 'area', data: dailyRevenues },
+        { name: 'New Bookings', type: 'column', data: dailyBookings }
+      ],
+      chart: { height: 260, type: 'line', background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+      stroke: { curve: 'smooth', width: [0, 0] },
+      fill: {
+        type: ['gradient', 'solid'],
+        gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.0, stops: [0, 100] }
+      },
+      colors: ['#d4af37', '#3b82f6'],
+      dataLabels: { enabled: false },
+      xaxis: {
+        categories: dailyKeys,
+        labels: { style: { colors: labelColor, fontFamily: 'Plus Jakarta Sans, sans-serif' } },
+        axisBorder: { show: false }, axisTicks: { show: false }
+      },
+      yaxis: [
+        { labels: { formatter: (val: number) => '₹' + val.toLocaleString(), style: { colors: '#d4af37', fontFamily: 'Inter, sans-serif' } } },
+        { opposite: true, labels: { formatter: (val: number) => Math.round(val).toString(), style: { colors: '#3b82f6', fontFamily: 'Inter, sans-serif' } } }
+      ],
+      legend: { position: 'top', horizontalAlign: 'right', labels: { colors: labelColor } },
+      tooltip: { theme: 'dark' },
+      grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 }
+    };
+
+    // Booking Status Breakdown (Donut/Pie)
+    let confirmed = 0, checkedIn = 0, checkedOut = 0;
+    bks.forEach(b => {
+      const st = b.status?.toLowerCase();
+      if (st === 'confirmed') confirmed++;
+      else if (st === 'checked in') checkedIn++;
+      else if (st === 'checked out') checkedOut++;
+    });
+
+    this.statusChartOptions = {
+      series: [confirmed, checkedIn, checkedOut],
+      chart: { type: 'donut', height: 260, background: 'transparent', animations: { enabled: false } },
+      labels: ['Confirmed', 'Checked In', 'Checked Out'],
+      colors: ['#ffe082', '#dc2626', '#10b981'],
+      dataLabels: { enabled: false },
+      stroke: { show: true, colors: ['var(--theme-card)'], width: 2 },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '75%',
+            labels: {
+              show: true,
+              name: {
+                show: true,
+                fontSize: '11px',
+                color: labelColor,
+                offsetY: -10
+              },
+              value: {
+                show: true,
+                fontSize: '22px',
+                fontWeight: 'bold',
+                color: '#ffffff',
+                offsetY: 10,
+                formatter: (val: string) => val
+              },
+              total: {
+                show: true,
+                label: 'Total Stays',
+                color: labelColor,
+                fontSize: '11px',
+                formatter: (w: any) => {
+                  return w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0).toString();
+                }
+              }
+            }
+          }
+        }
+      },
+      legend: { position: 'bottom', labels: { colors: labelColor } },
+      tooltip: { theme: 'dark' },
+      theme: { mode: 'dark' } as any,
+      // TypeScript compiler complains if we don't satisfy all properties, but some are optional.
+      xaxis: { categories: [] } as any,
+      yaxis: { labels: {} } as any,
+      grid: {} as any,
+      fill: {} as any
+    };
+  }
+
+  getOccupancyPacing(): number {
+    const total = this.filteredBookings.length;
+    if (!total) return 0;
+    return Math.round((this.activeCheckedInCount / total) * 100);
+  }
+
+  exportToExcel(): void {
+    const dataToExport = this.filteredBookings;
+    if (dataToExport.length === 0) {
+      this.message.warning('No bookings found in the selected date range to export.');
+      return;
+    }
+
+    const headers = [
+      'Guest Name',
+      'Phone Number',
+      'ID Number',
+      'Room Number',
+      'Room Category',
+      'Booking Source',
+      'Check In',
+      'Check Out',
+      'Number of Days',
+      'Number of People',
+      'Amount Paid (INR)',
+      'Status'
+    ];
+
+    const rows = dataToExport.map(b => [
+      b.guest_name || '',
+      b.phone_number || '',
+      b.id_number || '',
+      b.room_number || '',
+      b.room_category || '',
+      b.booking_source || '',
+      b.check_in ? new Date(b.check_in).toISOString().split('T')[0] : '',
+      b.check_out ? new Date(b.check_out).toISOString().split('T')[0] : '',
+      b.number_of_days || 1,
+      b.number_of_people || 1,
+      b.amount_paid || 0,
+      b.status || ''
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF'
+      + [headers.join(','), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+
+    let fileName = 'Room_Bookings_Report';
+    if (this.globalDateRange && this.globalDateRange.length === 2) {
+      const startStr = new Date(this.globalDateRange[0]).toISOString().split('T')[0];
+      const endStr = new Date(this.globalDateRange[1]).toISOString().split('T')[0];
+      fileName += `_${startStr}_to_${endStr}`;
+    } else {
+      fileName += `_${new Date().toISOString().split('T')[0]}`;
+    }
+
+    link.setAttribute('download', `${fileName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    this.message.success(`Exported ${dataToExport.length} bookings successfully.`);
   }
 
   saveBookings(): void {
@@ -1174,6 +1244,13 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     this.bookingForm.get('check_out')?.valueChanges.subscribe(() => {
       this.recalculateDaysFromDates();
     });
+
+    this.bookingForm.get('room_category')?.valueChanges.subscribe(() => {
+      const currentCategory = this.bookingForm.get('room_category')?.value;
+      if (currentCategory && this.getRoomsByCategory(currentCategory).length > 0) {
+        this.bookingForm.patchValue({ room_number: '' }, { emitEvent: false });
+      }
+    });
   }
 
   recalculateCheckOut(): void {
@@ -1184,8 +1261,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     const days = this.bookingForm.get('number_of_days')?.value;
 
     if (checkIn && days && days > 0) {
-      const checkInDate = new Date(checkIn);
-      const checkOutDate = new Date(checkInDate.getTime() + days * 24 * 60 * 60 * 1000);
+      const checkOutDate = DateUtils.addDays(checkIn, days);
       this.bookingForm.patchValue({ check_out: checkOutDate }, { emitEvent: false });
     }
 
@@ -1200,32 +1276,198 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     const checkOut = this.bookingForm.get('check_out')?.value;
 
     if (checkIn && checkOut) {
-      const start = new Date(checkIn);
-      const end = new Date(checkOut);
-      const diffTime = end.getTime() - start.getTime();
-      const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      const diffDays = DateUtils.getDaysBetween(checkIn, checkOut);
       this.bookingForm.patchValue({ number_of_days: diffDays }, { emitEvent: false });
     }
 
     this.isRecalculating = false;
   }
 
+  // Debounce timer for search
+  private searchTimeout: any;
+
+  onGuestNameInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.onGuestSearchChange(value);
+  }
+
+  onGuestSearchChange(value: string): void {
+    if (!value) {
+      this.guestSearchResults = [];
+      return;
+    }
+
+    // If no match yet, trigger the backend search with debounce
+    if (this.guestSearchTimer) {
+      clearTimeout(this.guestSearchTimer);
+    }
+
+    this.guestSearchTimer = setTimeout(async () => {
+      if (value.trim().length < 2) return;
+      const profile = this.supabase.currentProfile;
+      if (!this.isDatabaseLinked || !profile || !profile.hotel_id) return;
+
+      try {
+        const { data, error } = await this.supabase.searchGuests(profile.hotel_id, value);
+
+        if (!error && data) {
+          this.guestSearchResults = data;
+        }
+      } catch (e) {
+        console.error('Failed to search guests:', e);
+      }
+    }, 400);
+  }
+
+  onGuestSelected(event: any, guest: any): void {
+    if (event && event.isUserInput) {
+      let formattedPhone = guest.phone_number || '';
+      if (formattedPhone && formattedPhone.length === 10 && !formattedPhone.startsWith('+91')) {
+        formattedPhone = '+91 ' + formattedPhone;
+      } else if (formattedPhone && formattedPhone.startsWith('+91') && formattedPhone[3] !== ' ') {
+        formattedPhone = '+91 ' + formattedPhone.substring(3);
+      } else if (!formattedPhone) {
+        formattedPhone = '+91 ';
+      }
+
+      this.guestForm.patchValue({
+        name: guest.name || '',
+        phone_number: formattedPhone,
+        id_number: guest.id_number || '',
+        id_type: guest.id_type || 'Aadhar Card',
+        address: guest.address || ''
+      });
+      this.guestForm.updateValueAndValidity();
+      this.message.success(`Auto-filled details for: ${guest.name}`);
+
+      // Also update the search query field to reflect the selected name
+      setTimeout(() => {
+        this.guestSearchQuery = guest.name;
+      }, 0);
+    }
+  }
+
+  openGuestModal(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.guestForm.reset({ phone_number: '+91 ', id_type: 'Aadhar Card' });
+    this.guestSearchQuery = '';
+    this.guestSearchResults = [];
+    this.isGuestModalVisible = true;
+  }
+
+  removeGuest(index: number, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.selectedGuests.splice(index, 1);
+    this.updateBookingFormGuests();
+  }
+
+  updateBookingFormGuests(): void {
+    this.bookingForm.patchValue({
+      guest_name: this.selectedGuests.map(g => g.name).join(', '),
+      phone_number: this.selectedGuests.map(g => g.phone_number).filter(Boolean).join(', '),
+      id_number: this.selectedGuests.map(g => g.id_number).filter(Boolean).join(', '),
+      address: this.selectedGuests[0]?.address || '',
+      number_of_people: Math.max(1, this.selectedGuests.length)
+    });
+    this.bookingForm.updateValueAndValidity();
+  }
+
+  handleGuestCancel(): void {
+    this.isGuestModalVisible = false;
+    this.guestForm.reset({ phone_number: '+91 ', id_type: 'Aadhar Card' });
+  }
+
+  async handleGuestOk(): Promise<void> {
+    if (this.guestForm.valid) {
+      this.isGuestOkLoading = true;
+      try {
+        const formValue = this.guestForm.value;
+        const profile = this.supabase.currentProfile;
+        const hotelId = profile?.hotel_id;
+
+        if (this.isDatabaseLinked && hotelId) {
+          // Check if guest already exists by phone number
+          const { data: existing } = await this.supabase.getGuestByPhone(hotelId, formValue.phone_number);
+
+          if (!existing) {
+            const { error } = await this.supabase.insertGuest({
+                hotel_id: hotelId,
+                name: formValue.name,
+                phone_number: formValue.phone_number,
+                id_number: formValue.id_number || '',
+                id_type: formValue.id_type || 'Aadhar Card',
+                address: formValue.address || ''
+              });
+
+            if (error) {
+              console.warn('Could not save to guests table (perhaps table is missing):', error);
+            } else {
+              this.message.success('Guest profile created and saved to database!');
+            }
+          } else {
+            const { error: updateError } = await this.supabase.updateGuest(existing.id, {
+                name: formValue.name,
+                id_number: formValue.id_number || '',
+                address: formValue.address || ''
+              });
+
+            if (!updateError) {
+              this.message.success('Guest profile updated!');
+            }
+          }
+        }
+
+        // Add this guest to our selectedGuests array
+        this.selectedGuests.push({
+          name: formValue.name,
+          phone_number: formValue.phone_number,
+          id_number: formValue.id_number || '',
+          address: formValue.address || ''
+        });
+
+        // Auto-fill the booking form with this new guest's details
+        this.updateBookingFormGuests();
+
+        this.isGuestModalVisible = false;
+        this.guestForm.reset({ phone_number: '+91 ', id_type: 'Aadhar Card' });
+      } catch (e: any) {
+        console.error('Failed to create guest:', e);
+        this.message.error(e.message || 'Failed to create guest profile');
+      } finally {
+        this.isGuestOkLoading = false;
+      }
+    } else {
+      Object.values(this.guestForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+    }
+  }
+
   openBookingAddModal(): void {
     this.editingBookingId = null;
     this.fileList = [];
+    this.selectedGuests = [];
     const now = new Date();
-    const defaultCheckOut = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const defaultCheckOut = DateUtils.addDays(now, 1);
     this.bookingForm.reset({
       guest_name: '',
       phone_number: '',
       id_number: '',
       room_number: '',
       room_category: '',
+      booking_source: '',
+      pincode: '',
       address: '',
       check_in: now,
       check_out: defaultCheckOut,
       number_of_days: 1,
       number_of_people: 1,
+      total_amount: null,
       amount_paid: null,
       status: 'Checked In'
     });
@@ -1236,12 +1478,28 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     this.editingBookingId = data.id;
     this.fileList = [];
 
+    // Parse existing guests from comma-separated string
+    this.selectedGuests = [];
+    if (data.guest_name) {
+      const names = data.guest_name.split(',').map((s: string) => s.trim());
+      const phones = (data.phone_number || '').split(',').map((s: string) => s.trim());
+      const ids = (data.id_number || '').split(',').map((s: string) => s.trim());
+
+      for (let i = 0; i < names.length; i++) {
+        if (names[i]) {
+          this.selectedGuests.push({
+            name: names[i],
+            phone_number: phones[i] || '',
+            id_number: ids[i] || '',
+            address: i === 0 ? data.address : ''
+          });
+        }
+      }
+    }
+
     let days = data.number_of_days;
     if (!days && data.check_in && data.check_out) {
-      const start = new Date(data.check_in);
-      const end = new Date(data.check_out);
-      const diffTime = end.getTime() - start.getTime();
-      days = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      days = DateUtils.getDaysBetween(data.check_in, data.check_out);
     }
 
     this.bookingForm.reset({
@@ -1250,14 +1508,17 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       id_number: data.id_number || '',
       room_number: data.room_number,
       room_category: data.room_category || '',
+      booking_source: data.booking_source || '',
+      pincode: '',
       address: data.address || '',
       check_in: data.check_in,
       check_out: data.check_out,
       number_of_days: days || 1,
       number_of_people: data.number_of_people || 1,
-      amount_paid: data.amount_paid,
+      total_amount: data.total_amount || null,
+      amount_paid: data.amount_paid || null,
       status: data.status
-    });
+    }, { emitEvent: false });
     this.isBookingModalVisible = true;
   }
 
@@ -1268,7 +1529,17 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   }
 
   async updateBookingStatusDirectly(booking: any, newStatus: string): Promise<void> {
+    const oldStatus = booking.status;
+    
     if (newStatus === 'Checked Out') {
+      // Temporarily nullify the status to force Angular to push the old value 
+      // back into the nz-select component, reverting the visual change immediately.
+      // If the checkout is completed successfully, the grid will reload anyway.
+      booking.status = null;
+      setTimeout(() => {
+        booking.status = oldStatus;
+      });
+      
       this.supabase.requestOpenCheckout(booking);
       return;
     }
@@ -1277,16 +1548,12 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       const affectedDates = this.getStayDates(booking.check_in, booking.check_out);
 
       if (this.isDatabaseLinked) {
-        const client = this.supabase.getClient();
-        const updatePayload: any = { 
+        const updatePayload: any = {
           status: newStatus,
           actual_checkout: null
         };
 
-        const { error } = await client
-          .from('room_bookings')
-          .update(updatePayload)
-          .eq('id', booking.id);
+        const { error } = await this.supabase.updateRoomBooking(booking.id, updatePayload);
 
         if (error) throw error;
         this.message.success(`Status updated to ${newStatus} in database!`);
@@ -1298,7 +1565,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
       booking.status = newStatus;
       booking.actual_checkout = null;
       this.bookings = [...this.bookings];
-      
+
       if (!this.isDatabaseLinked) {
         this.saveBookings();
       }
@@ -1313,9 +1580,37 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
 
   async handleBookingOk(): Promise<void> {
+    if (this.selectedGuests.length === 0) {
+      this.message.error('Please add at least one guest profile before saving the booking.', { nzDuration: 4000 });
+      return;
+    }
+
     if (this.bookingForm.valid) {
-      this.isOkLoading = true;
       const formValue = this.bookingForm.value;
+      const newIn = new Date(formValue.check_in);
+      const newOut = new Date(formValue.check_out);
+
+      if (newOut <= newIn) {
+        this.message.error('Check-out date and time must be after check-in.');
+        return;
+      }
+
+      const isOverlap = this.bookings.some(b => {
+        if (this.editingBookingId && b.id === this.editingBookingId) return false;
+        if (b.status === 'Cancelled') return false;
+        if (b.room_number !== formValue.room_number) return false;
+
+        const extIn = new Date(b.check_in);
+        const extOut = new Date(b.check_out);
+        return (newIn < extOut && newOut > extIn);
+      });
+
+      if (isOverlap) {
+        this.message.error(`Room ${formValue.room_number} is already booked for these overlapping dates/times.`);
+        return;
+      }
+
+      this.isOkLoading = true;
       const profile = this.supabase.currentProfile;
       const hotelId = profile?.hotel_id;
 
@@ -1323,22 +1618,27 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
       if (this.isDatabaseLinked) {
         try {
-          const client = this.supabase.getClient();
-          
+
+
           const dbPayload: any = {
             guest_name: formValue.guest_name,
             phone_number: formValue.phone_number || '',
             id_number: formValue.id_number || '',
             room_number: formValue.room_number,
             room_category: formValue.room_category || '',
+            booking_source: formValue.booking_source || '',
             address: formValue.address || '',
             check_in: formValue.check_in,
             check_out: formValue.check_out,
             number_of_days: formValue.number_of_days,
             number_of_people: formValue.number_of_people,
+            total_amount: formValue.total_amount || 0,
             amount_paid: formValue.amount_paid || 0,
             status: formValue.status,
-            actual_checkout: null
+            actual_checkout: null,
+            gst_number: formValue.gst_number || '',
+            company_name: formValue.company_name || '',
+            notes: formValue.notes || ''
           };
 
           if (this.editingBookingId) {
@@ -1348,7 +1648,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
               const oldStayDates = this.getStayDates(oldBooking.check_in, oldBooking.check_out);
               const newStayDates = this.getStayDates(formValue.check_in, formValue.check_out);
               affectedDates = Array.from(new Set([...oldStayDates, ...newStayDates]));
-              
+
               dbPayload.actual_checkout = oldBooking.actual_checkout;
               if (formValue.status === 'Checked Out' && !oldBooking.actual_checkout) {
                 dbPayload.actual_checkout = new Date().toISOString();
@@ -1360,20 +1660,14 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
             }
 
             // Update Supabase
-            let { error } = await client
-              .from('room_bookings')
-              .update(dbPayload)
-              .eq('id', this.editingBookingId);
+            let { error } = await this.supabase.updateRoomBooking(this.editingBookingId, dbPayload);
 
             if (error) {
               const errMsg = error.message || '';
               if (errMsg.includes('number_of_days') || errMsg.includes('number_of_people')) {
                 delete dbPayload.number_of_days;
                 delete dbPayload.number_of_people;
-                const retryRes = await client
-                  .from('room_bookings')
-                  .update(dbPayload)
-                  .eq('id', this.editingBookingId);
+                const retryRes = await this.supabase.updateRoomBooking(this.editingBookingId, dbPayload);
                 error = retryRes.error;
               }
             }
@@ -1386,24 +1680,17 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
             dbPayload.actual_checkout = formValue.status === 'Checked Out' ? new Date().toISOString() : null;
 
             // Insert Supabase
-            let { data: insertedData, error } = await client
-              .from('room_bookings')
-              .insert([dbPayload])
-              .select()
-              .single();
+            let { data: insertedDataArray, error } = await this.supabase.insertRoomBooking(dbPayload);
+            let insertedData = insertedDataArray ? insertedDataArray[0] : null;
 
             if (error) {
               const errMsg = error.message || '';
               if (errMsg.includes('number_of_days') || errMsg.includes('number_of_people')) {
                 delete dbPayload.number_of_days;
                 delete dbPayload.number_of_people;
-                const retryRes = await client
-                  .from('room_bookings')
-                  .insert([dbPayload])
-                  .select()
-                  .single();
+                const retryRes = await this.supabase.insertRoomBooking(dbPayload);
                 error = retryRes.error;
-                insertedData = retryRes.data;
+                insertedData = retryRes.data ? retryRes.data[0] : null;
               }
             }
 
@@ -1417,7 +1704,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
             this.isUploadingFiles = true;
             let uploadCount = 0;
             const newPaths: string[] = [];
-            
+
             for (const file of this.fileList) {
               // Only upload if it doesn't have a URL (meaning it's a new file)
               if (!file.url && file as any) {
@@ -1434,16 +1721,13 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
                 }
               }
             }
-            
+
             if (newPaths.length > 0) {
               // Update the booking record with the new file paths
               // In a real app we'd fetch the existing JSON array first and append, 
               // but for now we'll just set them (assuming new booking)
-              const { error: updatePathsError } = await client
-                .from('room_bookings')
-                .update({ id_documents: newPaths })
-                .eq('id', this.editingBookingId);
-                
+              const { error: updatePathsError } = await this.supabase.updateRoomBooking(this.editingBookingId, { id_documents: newPaths });
+
               if (!updatePathsError) {
                 this.message.success(`Uploaded ${uploadCount} document(s) successfully.`);
               }
@@ -1452,7 +1736,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
           }
 
           await this.loadBookings();
-          
+
           // Sync to Daily Entries
           await this.syncBookingsToDailyEntries(affectedDates);
 
@@ -1532,11 +1816,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
     if (this.isDatabaseLinked) {
       try {
-        const client = this.supabase.getClient();
-        const { error } = await client
-          .from('room_bookings')
-          .delete()
-          .eq('id', id);
+        const { error } = await this.supabase.deleteRoomBooking(id);
 
         if (error) throw error;
         this.message.success('Booking record deleted successfully from database!');
@@ -1597,9 +1877,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
   }
 
   getLocalDateString(date: Date): string {
-    const d = new Date(date);
-    const offset = d.getTimezoneOffset();
-    return new Date(d.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+    return DateUtils.toLocalDateString(date);
   }
 
   getDbColumn(roomCategory: string): string {
@@ -1629,7 +1907,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     if (this.roomConfig) {
       Object.keys(this.roomConfig).forEach(key => {
         if (key !== '_order') {
-          totalRoomsLimit += Number(this.roomConfig[key] || 0);
+          totalRoomsLimit += Array.isArray(this.roomConfig[key]) ? this.roomConfig[key].length : Number(this.roomConfig[key] || 0);
         }
       });
     }
@@ -1638,8 +1916,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
     let allBookings: any[] = [];
     if (this.isDatabaseLinked) {
       try {
-        const client = this.supabase.getClient();
-        const { data } = await client.from('room_bookings').select('*');
+        const { data } = await this.supabase.getRoomBookings(hotelId !== 'default' ? hotelId : undefined);
         if (data) allBookings = data;
       } catch (e) {
         console.error('Failed to get all bookings for sync:', e);
@@ -1659,6 +1936,7 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
       // Filter active bookings on targetDate
       const activeBookings = allBookings.filter((b: any) => {
+        if (b.status === 'Cancelled' || b.status?.toLowerCase() === 'cancelled') return false;
         const checkIn = new Date(b.check_in);
         const checkOut = new Date(b.check_out);
         return (checkIn <= endOfDay && checkOut >= startOfDay);
@@ -1678,8 +1956,8 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
         else if (col === 'suite_rooms_sold') suite++;
       });
 
-      const rooms_sold = standard_ac + standard_non_ac + deluxe + suite;
-      const total_guests = activeBookings.length;
+      const rooms_sold = activeBookings.length;
+      const total_guests = activeBookings.reduce((sum: number, b: any) => sum + Number(b.number_of_people || 1), 0);
 
       // Revenue: sum of amount_paid of bookings that check in on this day
       let total_revenue = 0;
@@ -1692,55 +1970,43 @@ CREATE POLICY "Allow public delete" ON public.room_bookings FOR DELETE USING (tr
 
       if (this.isDatabaseLinked) {
         try {
-          const client = this.supabase.getClient();
-          const { data: existing, error: findError } = await client
-            .from('daily_entries')
-            .select('id')
-            .eq('hotel_id', hotelId)
-            .eq('entry_date', targetDateStr)
-            .maybeSingle();
+          const { data: existing, error: findError } = await this.supabase.getDailyEntryByDate(hotelId, targetDateStr);
 
           if (!findError) {
             if (existing) {
               // Update
-              await client
-                .from('daily_entries')
-                .update({
-                  rooms_sold,
-                  vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
-                  total_guests,
-                  total_revenue,
-                  standard_ac_rooms_sold: standard_ac,
-                  standard_non_ac_rooms_sold: standard_non_ac,
-                  deluxe_rooms_sold: deluxe,
-                  suite_rooms_sold: suite
-                })
-                .eq('id', existing.id);
+              await this.supabase.updateDailyEntry(existing.id, {
+                rooms_sold,
+                vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
+                total_guests,
+                total_revenue,
+                standard_ac_rooms_sold: standard_ac,
+                standard_non_ac_rooms_sold: standard_non_ac,
+                deluxe_rooms_sold: deluxe,
+                suite_rooms_sold: suite
+              });
             } else {
-              // Insert
-              await client
-                .from('daily_entries')
-                .insert([{
-                  hotel_id: hotelId,
-                  entry_date: targetDateStr,
-                  rooms_sold,
-                  total_rooms_available: totalRoomsLimit,
-                  vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
-                  total_guests,
-                  total_revenue,
-                  standard_ac_rooms_sold: standard_ac,
-                  standard_non_ac_rooms_sold: standard_non_ac,
-                  deluxe_rooms_sold: deluxe,
-                  suite_rooms_sold: suite,
-                  cash_payments: 0,
-                  upi_payments: 0,
-                  card_payments: 0,
-                  pending_payments: 0,
-                  restaurant_revenue: 0,
-                  other_service_revenue: 0,
-                  notes: 'Generated automatically from Room Bookings',
-                  created_by: userId
-                }]);
+              await this.supabase.insertDailyEntry({
+                hotel_id: hotelId,
+                entry_date: targetDateStr,
+                rooms_sold,
+                total_rooms_available: totalRoomsLimit,
+                vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
+                total_guests,
+                total_revenue,
+                standard_ac_rooms_sold: standard_ac,
+                standard_non_ac_rooms_sold: standard_non_ac,
+                deluxe_rooms_sold: deluxe,
+                suite_rooms_sold: suite,
+                cash_payments: 0,
+                upi_payments: 0,
+                card_payments: 0,
+                pending_payments: 0,
+                restaurant_revenue: 0,
+                other_service_revenue: 0,
+                notes: 'Generated automatically from Room Bookings',
+                created_by: userId
+              });
             }
           }
         } catch (e) {

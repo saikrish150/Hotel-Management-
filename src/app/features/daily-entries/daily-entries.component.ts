@@ -15,6 +15,42 @@ import { NzPopoverModule } from 'ng-zorro-antd/popover';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { ColumnConfig, DEFAULT_DAILY_ENTRY_BASE_COLUMNS, DEFAULT_DAILY_ENTRY_END_COLUMNS } from '../../core/models/column-config.model';
 
+import { NgApexchartsModule } from 'ng-apexcharts';
+import {
+  ApexAxisChartSeries,
+  ApexNonAxisChartSeries,
+  ApexChart,
+  ApexXAxis,
+  ApexTitleSubtitle,
+  ApexDataLabels,
+  ApexStroke,
+  ApexYAxis,
+  ApexTooltip,
+  ApexFill,
+  ApexTheme,
+  ApexPlotOptions,
+  ApexLegend,
+  ApexGrid
+} from "ng-apexcharts";
+
+export type ChartOptions = {
+  series: ApexAxisChartSeries | ApexNonAxisChartSeries;
+  chart: ApexChart;
+  xaxis: ApexXAxis;
+  stroke: ApexStroke;
+  dataLabels: ApexDataLabels;
+  yaxis: ApexYAxis | ApexYAxis[];
+  title: ApexTitleSubtitle;
+  labels: string[];
+  tooltip: ApexTooltip;
+  fill: ApexFill;
+  theme: ApexTheme;
+  colors: string[];
+  plotOptions: ApexPlotOptions;
+  legend: ApexLegend;
+  grid: ApexGrid;
+};
+
 @Component({
   selector: 'app-daily-entries',
   standalone: true,
@@ -31,7 +67,8 @@ import { ColumnConfig, DEFAULT_DAILY_ENTRY_BASE_COLUMNS, DEFAULT_DAILY_ENTRY_END
     NzInputModule,
     NzInputNumberModule,
     NzDatePickerModule,
-    NzPopoverModule
+    NzPopoverModule,
+    NgApexchartsModule
   ],
   styles: [`
     ::ng-deep .ant-popover-inner {
@@ -49,301 +86,7 @@ import { ColumnConfig, DEFAULT_DAILY_ENTRY_BASE_COLUMNS, DEFAULT_DAILY_ENTRY_END
       border-color: var(--theme-border) !important;
     }
   `],
-  template: `
-    <div class="space-y-8 pb-10">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
-        <div>
-          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Daily Audit Logs</h2>
-          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Room Occupancy & Daily Yield Ledger</p>
-        </div>
-        <button class="bg-[var(--theme-primary)] text-black border-none hover:bg-[var(--theme-primary-dark)] shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer"
-                (click)="openAddModal()">
-          <span nz-icon nzType="plus"></span> Add Daily Entry
-        </button>
-      </div>
-
-      <!-- Dynamic Statistics Cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Avg Daily Occupancy</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ averageOccupancy }}%</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-500/5 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Total Rooms Sold</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalRoomsSold }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/5 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Recorded Revenue</span>
-          <h3 class="text-3xl text-[var(--theme-primary)] font-medium mt-4">₹{{ totalRevenueCollected | number }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/10 blur-xl rounded-full"></div>
-        </div>
-        <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-          <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Peak Daily Revenue</span>
-          <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">₹{{ peakDailyRevenue | number }}</h3>
-          <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-500/5 blur-xl rounded-full"></div>
-        </div>
-      </div>
-
-      <div class="glass-card p-6">
-        <div class="flex flex-col gap-3 mb-4">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">Audit Logs Ledger</span>
-            </div>
-            <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] text-xs flex items-center gap-1" (click)="resetDailyFilters()">
-              <span nz-icon nzType="close"></span> Clear All Filters
-            </button>
-          </div>
-          <!-- Hidden Columns restore area -->
-          <div *ngIf="getHiddenColumns().length > 0" class="flex flex-wrap items-center gap-2 bg-[var(--theme-surface)] border border-[var(--theme-border)] rounded-xl p-2.5">
-            <span class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider mr-1">Hidden Columns:</span>
-            <button *ngFor="let col of getHiddenColumns()" 
-                    (click)="toggleColumnVisibility(col.key, true)" 
-                    class="bg-[var(--theme-border)]/20 hover:bg-[var(--theme-border)]/40 text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] text-[10px] px-2.5 py-1 rounded-lg border border-[var(--theme-border)] transition-all flex items-center gap-1.5 cursor-pointer">
-              <span nz-icon nzType="plus" class="text-[8px]"></span>
-              <span>{{ col.label }}</span>
-            </button>
-          </div>
-        </div>
-
-        <nz-table #basicTable 
-                  [nzData]="filteredEntries" 
-                  [nzFrontPagination]="true" 
-                  [nzPageSize]="10" 
-                  nzSize="middle" 
-                  [nzBordered]="false"
-                  [nzLoading]="loading"
-                  [nzScroll]="{ x: '1400px' }">
-          <thead>
-            <tr class="text-left border-b border-[var(--theme-border)]">
-              <ng-container *ngFor="let col of columns; let i = index">
-                <th *ngIf="col.visible" 
-                    class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none group relative" 
-                    [nzWidth]="col.width || null" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'">
-                  
-                  <div class="flex items-center gap-1.5" [class.justify-center]="col.align === 'center'" [class.justify-end]="col.align === 'right'">
-                    <!-- Reordering & Hide Controls on Hover -->
-                    <div class="hidden group-hover:flex items-center gap-0.5 mr-1 text-[10px] text-[var(--theme-text-muted)] bg-[var(--theme-card)] backdrop-blur rounded-lg px-1.5 py-1 border border-[var(--theme-border)] absolute -top-8 left-1/2 -translate-x-1/2 z-10 shadow-lg">
-                      <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0" 
-                              [disabled]="i === 0" (click)="moveColumn(i, 'left'); $event.stopPropagation()">
-                        <span nz-icon nzType="left" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-0.5" 
-                              [disabled]="i === columns.length - 1" (click)="moveColumn(i, 'right'); $event.stopPropagation()">
-                        <span nz-icon nzType="right" class="text-[9px]"></span>
-                      </button>
-                      <button nz-button nzType="text" class="text-rose-400 hover:text-rose-300 p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-1 border-l border-[var(--theme-border)] pl-1" 
-                              (click)="toggleColumnVisibility(col.key, false); $event.stopPropagation()">
-                        <span nz-icon nzType="close" class="text-[9px]"></span>
-                      </button>
-                    </div>
-
-                    <span>{{ col.label }}</span>
-
-                    <!-- Conditional Column Header popover filters -->
-                    <ng-container [ngSwitch]="col.key">
-                      <span *ngSwitchCase="'entry_date'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="dailyFilterDate"
-                            nz-popover [nzPopoverContent]="dailyDateFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'rooms_sold'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="dailyMinRoomsSold"
-                            nz-popover [nzPopoverContent]="dailyRoomsFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                      <span *ngSwitchCase="'total_revenue'" nz-icon nzType="filter" nzTheme="outline" 
-                            class="cursor-pointer text-[var(--theme-primary)] hover:text-[var(--theme-text-main)] transition-colors"
-                            [class.text-[var(--theme-text-main)]]="dailyMinRevenue"
-                            nz-popover [nzPopoverContent]="dailyRevenueFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
-                    </ng-container>
-                  </div>
-                </th>
-              </ng-container>
-              <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none text-right" nzWidth="100px">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody class="text-sm">
-            <tr *ngFor="let data of basicTable.data" class="border-b border-[var(--theme-border)] transition-colors">
-              <ng-container *ngFor="let col of columns">
-                <td *ngIf="col.visible" 
-                    class="py-4 text-xs bg-transparent border-none font-light" 
-                    [class.text-center]="col.align === 'center'" 
-                    [class.text-right]="col.align === 'right'"
-                    [class.font-semibold]="col.key === 'entry_date' || col.key === 'total_revenue'"
-                    [class.font-medium]="col.key === 'rooms_sold'"
-                    [class.text-[var(--theme-text-main)]]="col.key === 'entry_date' || col.key === 'rooms_sold' || col.key !== 'total_rooms_available' && col.key !== 'total_guests' && col.key !== 'notes'"
-                    [class.text-[var(--theme-text-muted)]]="col.key === 'total_rooms_available' || col.key === 'total_guests' || col.key === 'notes'"
-                    [class.max-w-[200px]]="col.key === 'notes'"
-                    [class.truncate]="col.key === 'notes'"
-                    [class.uppercase]="col.key === 'entry_date'"
-                    [class.tracking-wider]="col.key === 'entry_date'"
-                    [title]="col.key === 'notes' ? (data.notes || '') : ''">
-                  
-                  <ng-container [ngSwitch]="col.key">
-                    <span *ngSwitchCase="'entry_date'">{{ data.entry_date | date:'dd MMM yyyy' }}</span>
-                    <span *ngSwitchCase="'rooms_sold'">{{ data.rooms_sold }}</span>
-                    <span *ngSwitchCase="'total_rooms_available'">{{ data.total_rooms_available }} rooms</span>
-                    <span *ngSwitchCase="'total_guests'">{{ data.total_guests }} guests</span>
-                    <span *ngSwitchCase="'total_revenue'" class="text-[var(--theme-primary)]">₹{{ data.total_revenue | number }}</span>
-                    <span *ngSwitchCase="'notes'">{{ data.notes || '-' }}</span>
-                    <span *ngSwitchDefault>{{ data[col.key] || 0 }}</span>
-                  </ng-container>
-
-                </td>
-              </ng-container>
-              <td class="py-4 bg-transparent border-none text-right">
-                <button nz-button nzType="text" class="text-amber-500 hover:text-amber-400 transition-colors p-0 mr-4" (click)="openEditModal(data)">
-                  <span nz-icon nzType="edit" class="text-base"></span>
-                </button>
-                <button nz-button nzType="text" class="text-rose-500 hover:text-rose-400 transition-colors p-0" nz-popconfirm nzPopconfirmTitle="Are you sure to delete this daily audit log?" (nzOnConfirm)="deleteEntry(data.id)">
-                  <span nz-icon nzType="delete" class="text-base"></span>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="filteredEntries.length === 0">
-              <td [attr.colspan]="getVisibleColumnsCount() + 1" class="text-center py-8 text-[var(--theme-text-muted)] bg-transparent border-none">
-                No logs matches the active filters.
-              </td>
-            </tr>
-          </tbody>
-        </nz-table>
-      </div>
-
-      <!-- Popover Content Templates -->
-      <ng-template #dailyDateFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Date</span>
-          </div>
-          <div class="mb-4">
-            <nz-date-picker [(ngModel)]="dailyFilterDate" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" nzFormat="yyyy-MM-dd"></nz-date-picker>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="dailyFilterDate = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #dailyRoomsFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Min Rooms Sold</span>
-          </div>
-          <div class="mb-4">
-            <nz-input-number [(ngModel)]="dailyMinRoomsSold" [nzMin]="0" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" placeholder="e.g. 5"></nz-input-number>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="dailyMinRoomsSold = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-
-      <ng-template #dailyRevenueFilterTpl>
-        <div class="p-4 w-72">
-          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
-            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Min Revenue (₹)</span>
-          </div>
-          <div class="mb-4">
-            <nz-input-number [(ngModel)]="dailyMinRevenue" [nzMin]="0" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" placeholder="e.g. 10000"></nz-input-number>
-          </div>
-          <div class="flex justify-end gap-2">
-            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="dailyMinRevenue = null">Reset</button>
-            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
-          </div>
-        </div>
-      </ng-template>
-    </div>
-
-    <!-- Edit Modal -->
-    <nz-modal [(nzVisible)]="isEditModalVisible" 
-              [nzTitle]="modalTitle" 
-              (nzOnCancel)="handleCancel()" 
-              [nzFooter]="modalFooter"
-              [nzWidth]="950">
-      
-      <ng-template #modalTitle>
-        <div class="flex items-center gap-3">
-          <span nz-icon nzType="edit" class="text-lg" [style.color]="'var(--theme-primary)'"></span>
-          <span class="text-[var(--theme-text-main)] font-semibold uppercase tracking-wider text-xs" style="font-family: 'Hanken Grotesk', sans-serif;">Edit Daily Audit Log</span>
-        </div>
-      </ng-template>
-
-      <ng-template #modalFooter>
-        <div class="flex justify-end gap-3 px-4 py-3">
-          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleCancel()">
-            Cancel
-          </button>
-          <button nz-button [nzLoading]="isOkLoading" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="handleEditOk()">
-            Save Changes
-          </button>
-        </div>
-      </ng-template>
-
-      <ng-container *nzModalContent>
-        <form nz-form nzLayout="vertical" [formGroup]="editForm" class="p-2">
-          <div nz-row [nzGutter]="[16, 12]">
-            <ng-container *ngFor="let field of popupFields">
-              <ng-container *ngIf="field.visible && field.key !== 'entry_date' && field.key !== 'vacant_rooms' && field.key !== 'total_rooms_available'">
-                <div nz-col nzXs="24" nzSm="12" [nzMd]="field.key === 'notes' ? 24 : 8">
-                  <ng-container [ngSwitch]="field.key">
-                    
-                    <!-- Rooms Sold -->
-                    <nz-form-item *ngSwitchCase="'rooms_sold'" class="mb-0">
-                      <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Rooms Sold (Total)</nz-form-label>
-                      <nz-form-control>
-                        <nz-input-number formControlName="rooms_sold" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                      </nz-form-control>
-                    </nz-form-item>
-
-                    <!-- Total Revenue -->
-                    <nz-form-item *ngSwitchCase="'total_revenue'" class="mb-0">
-                      <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Total Revenue</nz-form-label>
-                      <nz-form-control nzErrorTip="Please input total revenue">
-                        <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                          <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                          <input type="number" nz-input formControlName="total_revenue" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                        </div>
-                      </nz-form-control>
-                    </nz-form-item>
-
-                    <!-- Total Guests -->
-                    <nz-form-item *ngSwitchCase="'total_guests'" class="mb-0">
-                      <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Total Guests</nz-form-label>
-                      <nz-form-control>
-                        <nz-input-number formControlName="total_guests" [nzMin]="0" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="Optional"></nz-input-number>
-                      </nz-form-control>
-                    </nz-form-item>
-
-                    <!-- Notes -->
-                    <nz-form-item *ngSwitchCase="'notes'" class="mb-0">
-                      <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Notes / Remarks</nz-form-label>
-                      <nz-form-control>
-                        <input nz-input formControlName="notes" placeholder="Any special notes for today..." class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                      </nz-form-control>
-                    </nz-form-item>
-                    
-                    <!-- Dynamic Room Categories -->
-                    <nz-form-item *ngSwitchDefault class="mb-0">
-                      <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium overflow-hidden text-ellipsis whitespace-nowrap">{{ field.label }}</nz-form-label>
-                      <nz-form-control [nzErrorTip]="'Max ' + (roomConfig[field.key] || 0)">
-                        <nz-input-number [formControlName]="field.key" [nzMin]="0" [nzMax]="roomConfig[field.key]" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                      </nz-form-control>
-                    </nz-form-item>
-
-                  </ng-container>
-                </div>
-              </ng-container>
-            </ng-container>
-          </div>
-        </form>
-      </ng-container>
-    </nz-modal>
-  `
+  templateUrl: './daily-entries.component.html'
 })
 export class DailyEntriesComponent implements OnInit {
   entries: any[] = [];
@@ -352,6 +95,10 @@ export class DailyEntriesComponent implements OnInit {
   columns: ColumnConfig[] = [];
   popupFields: ColumnConfig[] = [];
 
+  sortColumn = 'entry_date';
+  sortDirection = 'desc';
+  isMandatoryCheckEnabled = false;
+
   // Computed statistics
   get averageOccupancy(): number {
     const sold = this.filteredEntries.reduce((sum, e) => sum + Number(e.rooms_sold || 0), 0);
@@ -359,25 +106,52 @@ export class DailyEntriesComponent implements OnInit {
     return avail > 0 ? Math.round((sold / avail) * 100) : 0;
   }
 
-  get totalRoomsSold(): number {
-    return this.filteredEntries.reduce((sum, e) => sum + Number(e.rooms_sold || 0), 0);
+  get avgRoomsSold(): number {
+    if (this.filteredEntries.length === 0) return 0;
+    const total = this.filteredEntries.reduce((sum, e) => sum + Number(e.rooms_sold || 0), 0);
+    return Math.round(total / this.filteredEntries.length);
   }
 
-  get totalRevenueCollected(): number {
-    return this.filteredEntries.reduce((sum, e) => sum + Number(e.total_revenue || 0), 0);
+  get avgDailyRevenue(): number {
+    if (this.filteredEntries.length === 0) return 0;
+    const total = this.filteredEntries.reduce((sum, e) => sum + Number(e.total_revenue || 0), 0);
+    return Math.round(total / this.filteredEntries.length);
   }
 
-  get peakDailyRevenue(): number {
-    return this.filteredEntries.reduce((max, e) => Math.max(max, Number(e.total_revenue || 0)), 0);
+  get avgRevPar(): number {
+    if (this.filteredEntries.length === 0) return 0;
+    const totalRev = this.filteredEntries.reduce((sum, e) => sum + Number(e.total_revenue || 0), 0);
+    const totalAvail = this.filteredEntries.reduce((sum, e) => sum + Number(e.total_rooms_available || 0), 0);
+    return totalAvail > 0 ? Math.round(totalRev / totalAvail) : 0;
   }
 
   // Filter variables
   dailyFilterDate: Date | null = null;
   dailyMinRoomsSold: number | null = null;
   dailyMinRevenue: number | null = null;
+  globalDateRange: Date[] = [];
+  activePresetRange: string | null = null;
+
+  // Chart Options
+  revenueOccupancyChartOptions!: Partial<ChartOptions>;
+  roomDistributionChartOptions!: Partial<ChartOptions>;
+  sparklineOccupancy!: Partial<ChartOptions>;
+  sparklineRevenue!: Partial<ChartOptions>;
+  sparklineRoomsSold!: Partial<ChartOptions>;
 
   get filteredEntries(): any[] {
-    return this.entries.filter(e => {
+    const list = this.entries.filter(e => {
+      // Global date range filter
+      if (this.globalDateRange && this.globalDateRange.length === 2) {
+        const d = new Date(e.entry_date);
+        d.setHours(0,0,0,0);
+        const start = new Date(this.globalDateRange[0]);
+        start.setHours(0,0,0,0);
+        const end = new Date(this.globalDateRange[1]);
+        end.setHours(23,59,59,999);
+        if (d < start || d > end) return false;
+      }
+
       let matchesDate = true;
       if (this.dailyFilterDate) {
         const selDate = new Date(this.dailyFilterDate);
@@ -399,12 +173,76 @@ export class DailyEntriesComponent implements OnInit {
 
       return matchesDate && matchesRooms && matchesRevenue;
     });
+
+    const sortCol = this.sortColumn || 'entry_date';
+    const sortDir = this.sortDirection || 'desc';
+
+    return list.sort((a, b) => {
+      let valA = a[sortCol];
+      let valB = b[sortCol];
+
+      if (sortCol === 'entry_date') {
+        const timeA = valA ? new Date(valA).getTime() : 0;
+        const timeB = valB ? new Date(valB).getTime() : 0;
+        return sortDir === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      if (sortCol === 'rooms_sold' || sortCol === 'total_rooms_available' || sortCol === 'total_revenue' || sortCol === 'total_guests') {
+        const numA = Number(valA || 0);
+        const numB = Number(valB || 0);
+        return sortDir === 'asc' ? numA - numB : numB - numA;
+      }
+
+      const strA = String(valA || '').toLowerCase();
+      const strB = String(valB || '').toLowerCase();
+      if (strA < strB) return sortDir === 'asc' ? -1 : 1;
+      if (strA > strB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
   }
 
   resetDailyFilters(): void {
     this.dailyFilterDate = null;
     this.dailyMinRoomsSold = null;
     this.dailyMinRevenue = null;
+    this.globalDateRange = [];
+    this.activePresetRange = null;
+  }
+
+  applyPresetRange(preset: string): void {
+    this.activePresetRange = preset;
+    const end = new Date();
+    const start = new Date();
+    end.setHours(23, 59, 59, 999);
+    start.setHours(0, 0, 0, 0);
+
+    if (preset === 'Today') {
+      // default
+    } else if (preset === 'Yesterday') {
+      start.setDate(start.getDate() - 1);
+      end.setDate(end.getDate() - 1);
+    } else if (preset === 'Past 7 Days') {
+      start.setDate(start.getDate() - 6);
+    } else if (preset === 'Past 30 Days') {
+      start.setDate(start.getDate() - 29);
+    } else if (preset === 'Current Month') {
+      start.setDate(1);
+    } else if (preset === 'Previous Month') {
+      start.setMonth(start.getMonth() - 1);
+      start.setDate(1);
+      end.setDate(0); 
+    } else if (preset === 'Last 6 Months') {
+      start.setMonth(start.getMonth() - 6);
+    }
+    this.globalDateRange = [start, end];
+  }
+
+  onGlobalFilterChange(): void {
+    if (!this.globalDateRange || this.globalDateRange.length === 0) {
+      this.activePresetRange = null;
+    } else if (this.activePresetRange !== 'custom') {
+      this.activePresetRange = 'custom';
+    }
   }
 
   openAddModal(): void {
@@ -460,7 +298,7 @@ export class DailyEntriesComponent implements OnInit {
 
           let totalLimit = 0;
           this.roomTypes.forEach(type => {
-            const limit = this.roomConfig[type] || 0;
+            const limit = this.getRoomLimit(type);
             totalLimit += limit;
 
             // Dynamically add form control
@@ -471,7 +309,7 @@ export class DailyEntriesComponent implements OnInit {
 
             // Calculate total rooms sold on change
             this.editForm.get(type)?.valueChanges.subscribe((value) => {
-              const limitVal = this.roomConfig[type] || 0;
+              const limitVal = this.getRoomLimit(type);
               if (value > limitVal) {
                 this.editForm.get(type)?.setValue(limitVal);
               } else {
@@ -516,6 +354,10 @@ export class DailyEntriesComponent implements OnInit {
           } else {
             if (config.table) this.applySavedColumns(config.table);
             if (config.popup) this.applySavedPopupFields(config.popup);
+            this.sortColumn = config.sort_column || 'entry_date';
+            this.sortDirection = config.sort_direction || 'desc';
+            this.isMandatoryCheckEnabled = config.mandatory_edit_check || false;
+            this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
           }
         } else {
           const local = localStorage.getItem('daily_entries_column_config');
@@ -528,10 +370,51 @@ export class DailyEntriesComponent implements OnInit {
               } else {
                 if (parsed.table) this.applySavedColumns(parsed.table);
                 if (parsed.popup) this.applySavedPopupFields(parsed.popup);
+                this.sortColumn = parsed.sort_column || 'entry_date';
+                this.sortDirection = parsed.sort_direction || 'desc';
+                this.isMandatoryCheckEnabled = parsed.mandatory_edit_check || false;
+                this.applyMandatoryChecks(this.isMandatoryCheckEnabled);
               }
             } catch (e) {}
           }
         }
+      }
+    });
+  }
+
+  getRoomLimit(type: string): number {
+    if (!this.roomConfig || !this.roomConfig[type]) return 0;
+    if (Array.isArray(this.roomConfig[type])) return this.roomConfig[type].length;
+    return Number(this.roomConfig[type]) || 0;
+  }
+
+  isColumnMandatory(key: string): boolean {
+    const col = this.popupFields?.find(c => c.key === key);
+    return col ? col.mandatory === true : false;
+  }
+
+  applyMandatoryChecks(mandatory: boolean): void {
+    if (!this.popupFields || this.popupFields.length === 0) return;
+
+    this.popupFields.forEach(col => {
+      const isMandatory = col.mandatory === true;
+      const control = this.editForm?.get(col.key);
+      if (control) {
+        if (isMandatory) {
+          if (col.key === 'rooms_sold' || col.key === 'total_rooms_available' || col.key === 'total_guests') {
+            control.setValidators([Validators.required, Validators.min(0)]);
+          } else if (col.key === 'total_revenue') {
+            control.setValidators([Validators.required, Validators.min(0)]);
+          } else {
+            control.setValidators([Validators.required]);
+          }
+        } else {
+          control.clearValidators();
+          if (['rooms_sold', 'total_rooms_available', 'total_guests', 'total_revenue'].includes(col.key)) {
+            control.setValidators([Validators.min(0)]);
+          }
+        }
+        control.updateValueAndValidity();
       }
     });
   }
@@ -547,7 +430,8 @@ export class DailyEntriesComponent implements OnInit {
       if (existing) {
         newCols.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         colMap.delete(s.key);
       }
@@ -589,7 +473,8 @@ export class DailyEntriesComponent implements OnInit {
       if (existing) {
         newFields.push({
           ...existing,
-          visible: s.visible
+          visible: s.visible,
+          mandatory: s.mandatory
         });
         fieldMap.delete(s.key);
       }
@@ -597,11 +482,12 @@ export class DailyEntriesComponent implements OnInit {
     
     fieldMap.forEach(f => newFields.push(f));
     this.popupFields = newFields;
+    this.applyMandatoryChecks(false);
   }
 
   async saveColumnConfig(): Promise<void> {
-    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible }));
-    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible }));
+    const tableConfig = this.columns.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory }));
+    const popupConfig = this.popupFields.map(f => ({ key: f.key, visible: f.visible, mandatory: f.mandatory }));
     const combined = { table: tableConfig, popup: popupConfig };
 
     const profile = this.supabase.currentProfile;
@@ -637,6 +523,116 @@ export class DailyEntriesComponent implements OnInit {
     await this.loadEntries();
   }
 
+  updateCharts(): void {
+    const entries = [...this.filteredEntries].reverse(); // oldest to newest for charts
+    
+    if (entries.length === 0) {
+      this.sparklineOccupancy = undefined as any;
+      this.sparklineRoomsSold = undefined as any;
+      this.sparklineRevenue = undefined as any;
+      this.revenueOccupancyChartOptions = undefined as any;
+      this.roomDistributionChartOptions = undefined as any;
+      return;
+    }
+
+    const categories = entries.map(e => {
+      const d = new Date(e.entry_date);
+      return `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+    });
+
+    const occupancyData = entries.map(e => {
+      const sold = Number(e.rooms_sold || 0);
+      const avail = Number(e.total_rooms_available || 0);
+      return avail > 0 ? Math.round((sold / avail) * 100) : 0;
+    });
+
+    const revenueData = entries.map(e => Number(e.total_revenue || 0));
+    const roomsSoldData = entries.map(e => Number(e.rooms_sold || 0));
+
+    // Common sparkline options
+    const baseSparkline: Partial<ChartOptions> = {
+      chart: { type: 'area', width: '100%', height: 48, sparkline: { enabled: true }, animations: { enabled: false } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.0, stops: [0, 100] } },
+      tooltip: { fixed: { enabled: false }, x: { show: false }, y: { title: { formatter: function (seriesName) { return '' } } }, marker: { show: false } }
+    };
+
+    this.sparklineOccupancy = {
+      ...baseSparkline,
+      series: [{ name: 'Occupancy %', data: occupancyData }],
+      colors: ['#3b82f6'] // Blue
+    };
+
+    this.sparklineRoomsSold = {
+      ...baseSparkline,
+      series: [{ name: 'Rooms Sold', data: roomsSoldData }],
+      colors: ['#d4af37'] // Gold
+    };
+
+    this.sparklineRevenue = {
+      ...baseSparkline,
+      series: [{ name: 'Revenue', data: revenueData }],
+      colors: ['#d4af37'] // Gold
+    };
+
+    // Revenue vs Occupancy Chart (Dual Axis Line/Area)
+    const labelColor = '#94a3b8'; // default dark theme
+    
+    this.revenueOccupancyChartOptions = {
+      series: [
+        { name: 'Revenue (₹)', type: 'area', data: revenueData }
+      ],
+      chart: { height: 220, type: 'area', background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+      stroke: { curve: 'smooth', width: 3 },
+      fill: {
+        type: 'gradient',
+        gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.0, stops: [0, 100] }
+      },
+      colors: ['#3b82f6'],
+      dataLabels: { enabled: false },
+      xaxis: { 
+        categories: categories,
+        labels: { style: { colors: labelColor, fontFamily: 'Plus Jakarta Sans, sans-serif' } },
+        axisBorder: { show: false }, axisTicks: { show: false }
+      },
+      yaxis: [
+        {
+          labels: { formatter: (val: number) => '₹' + val.toLocaleString(), style: { colors: labelColor, fontFamily: 'Inter, sans-serif' } }
+        }
+      ],
+      legend: { position: 'top', horizontalAlign: 'right', labels: { colors: labelColor } },
+      tooltip: { theme: 'dark' },
+      grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 }
+    };
+
+    // Room Distribution Chart (Stacked Bar)
+    const seriesData: any[] = [];
+    this.roomTypes.forEach(type => {
+      seriesData.push({
+        name: type,
+        data: entries.map(e => Number(e[type] || 0))
+      });
+    });
+
+    this.roomDistributionChartOptions = {
+      series: seriesData,
+      chart: { type: 'bar', height: 220, stacked: true, background: 'transparent', toolbar: { show: false }, animations: { enabled: false } },
+      plotOptions: { bar: { horizontal: false, borderRadius: 2, columnWidth: '40%' } },
+      xaxis: {
+        categories: categories,
+        labels: { style: { colors: labelColor, fontFamily: 'Plus Jakarta Sans, sans-serif' } },
+        axisBorder: { show: false }, axisTicks: { show: false }
+      },
+      yaxis: { labels: { style: { colors: labelColor, fontFamily: 'Inter, sans-serif' } } },
+      colors: ['#d4af37', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6'], // Palette
+      dataLabels: { enabled: false },
+      legend: { position: 'top', horizontalAlign: 'right', labels: { colors: labelColor } },
+      fill: { opacity: 1 },
+      tooltip: { theme: 'dark' },
+      grid: { borderColor: 'rgba(255, 255, 255, 0.05)', strokeDashArray: 4 }
+    };
+  }
+
   calculateTotalRoomsSold() {
     const totalSold = this.roomTypes.reduce((sum, type) => sum + (this.editForm.get(type)?.value || 0), 0);
     this.editForm.patchValue({ rooms_sold: totalSold }, { emitEvent: false });
@@ -668,11 +664,15 @@ export class DailyEntriesComponent implements OnInit {
   async loadEntries() {
     this.loading = true;
     try {
-      const client = this.supabase.getClient();
-      const { data, error } = await client
-        .from('daily_entries')
-        .select('*')
-        .order('entry_date', { ascending: false });
+      const profile = this.supabase.currentProfile;
+      const hotelId = profile?.hotel_id;
+      let queryResult;
+      if (hotelId) {
+        queryResult = await this.supabase.getDailyEntries(hotelId);
+      } else {
+        queryResult = await this.supabase.getDailyEntries();
+      }
+      const { data, error } = queryResult;
 
       if (error) {
         if (error.message.includes('relation') || error.message.includes('does not exist') || error.message.includes('schema cache')) {
@@ -688,6 +688,7 @@ export class DailyEntriesComponent implements OnInit {
           });
           return row;
         });
+        setTimeout(() => this.updateCharts(), 50);
       }
     } catch (e: any) {
       console.warn('Failed to load daily entries from Supabase, falling back to local storage', e);
@@ -714,6 +715,7 @@ export class DailyEntriesComponent implements OnInit {
     } else {
       this.entries = [];
     }
+    setTimeout(() => this.updateCharts(), 50);
   }
 
   openEditModal(data: any): void {
@@ -777,19 +779,15 @@ export class DailyEntriesComponent implements OnInit {
         // Try database first
         let dbSuccess = false;
         try {
-          const client = this.supabase.getClient();
-          const { error } = await client
-            .from('daily_entries')
-            .update({
-              rooms_sold: formData.rooms_sold,
-              total_rooms_available: formData.total_rooms_available,
-              vacant_rooms: vacantRooms >= 0 ? vacantRooms : 0,
-              total_guests: formData.total_guests || 0,
-              total_revenue: formData.total_revenue,
-              notes: formData.notes,
-              ...dbRoomData
-            })
-            .eq('id', this.editingId);
+          const { error } = await this.supabase.updateDailyEntry(this.editingId, {
+            rooms_sold: formData.rooms_sold,
+            total_rooms_available: formData.total_rooms_available,
+            vacant_rooms: vacantRooms >= 0 ? vacantRooms : 0,
+            total_guests: formData.total_guests || 0,
+            total_revenue: formData.total_revenue,
+            notes: formData.notes,
+            ...dbRoomData
+          });
 
           if (!error) {
             dbSuccess = true;
@@ -857,8 +855,7 @@ export class DailyEntriesComponent implements OnInit {
     let dbSuccess = false;
 
     try {
-      const client = this.supabase.getClient();
-      const { error } = await client.from('daily_entries').delete().eq('id', id);
+      const { error } = await this.supabase.deleteDailyEntry(id);
       if (!error) {
         dbSuccess = true;
       }

@@ -1,48 +1,44 @@
-<nz-layout class="min-h-screen bg-brand-dark relative overflow-hidden">
-  <!-- Glowing Ambient Blobs for Glassmorphism Backdrop Depth -->
-  <div class="glass-blob w-[500px] h-[500px] top-[-15%] left-[25%] pointer-events-none" style="--blob-color: rgba(212, 175, 55, 0.08);"></div>
-  <div class="glass-blob w-[600px] h-[600px] bottom-[5%] right-[-10%] pointer-events-none" style="--blob-color: rgba(16, 185, 129, 0.04); animation-delay: -5s;"></div>
-  <div class="glass-blob w-[450px] h-[450px] top-[40%] left-[-15%] pointer-events-none" style="--blob-color: rgba(244, 63, 94, 0.03); animation-delay: -10s;"></div>
-
-  <!-- Gorgeous premium sidebar -->
-  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzBreakpoint]="'lg'" [nzCollapsedWidth]="0" class="border-r border-[var(--theme-border)] shadow-2xl bg-[var(--theme-card)]" [nzTrigger]="null">
-    <!-- Sidebar Header / Logo -->
-    <div class="h-20 flex flex-col justify-center border-b border-[var(--theme-border)] px-6" *ngIf="!isCollapsed">
-      <h1 class="luxury-title text-xl font-bold tracking-wider">LuxeIntel</h1>
-      <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-[0.2em] uppercase -mt-0.5">ASSET MANAGEMENT</span>
+<nz-layout class="min-h-screen bg-brand-dark relative overflow-hidden noise-overlay">
+  <!-- Premium Sidebar -->
+  <nz-sider nzCollapsible [(nzCollapsed)]="isCollapsed" [nzBreakpoint]="'lg'" [nzCollapsedWidth]="0" [nzWidth]="260" class="border-r border-[var(--theme-border)] bg-[var(--theme-card)]" [nzTrigger]="null" style="box-shadow: 4px 0 30px rgba(0,0,0,0.4);">
+    <!-- Sidebar Header -->
+    <div class="h-20 flex flex-col justify-center border-b border-[var(--theme-border)] px-6 relative" *ngIf="!isCollapsed">
+      <h1 class="luxury-title text-xl font-bold tracking-wider">Hotelytics</h1>
+      <span class="text-[8px] text-[var(--theme-text-muted)] font-semibold tracking-[0.25em] uppercase -mt-0.5">Premium Operations</span>
+      <div class="absolute bottom-0 left-6 right-6 h-px bg-gradient-to-r from-[var(--theme-primary)]/20 via-[var(--theme-primary)]/5 to-transparent"></div>
     </div>
     <div class="h-20 flex items-center justify-center border-b border-[var(--theme-border)]" *ngIf="isCollapsed">
-      <h1 class="luxury-title text-xl font-bold tracking-wider">L</h1>
+      <h1 class="luxury-title text-xl font-bold tracking-wider">RK</h1>
     </div>
     
     <div class="flex flex-col justify-between h-[calc(100vh-80px)]">
-      <!-- Sidebar Menu Navigation -->
+      <!-- Navigation -->
       <ul nz-menu nzMode="inline" class="bg-transparent border-none mt-6 px-3">
-        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
           <a routerLink="/daily-entries" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
             <span nz-icon nzType="form" class="text-sm"></span>
             <span>Daily Entry</span>
           </a>
         </li>
-        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
           <a routerLink="/bookings" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
             <span nz-icon nzType="calendar" class="text-sm"></span>
             <span>Room Bookings</span>
           </a>
         </li>
-        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
           <a routerLink="/expenses" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
             <span nz-icon nzType="wallet" class="text-sm"></span>
             <span>Monthly Expenses</span>
           </a>
         </li>
-        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+        <li *ngIf="(profile$ | async)?.role === 'Admin'" nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
           <a routerLink="/analytics" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
             <span nz-icon nzType="line-chart" class="text-sm"></span>
             <span>Analytics</span>
           </a>
         </li>
-        <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+        <li *ngIf="(profile$ | async)?.role === 'Admin'" nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
           <a routerLink="/reports" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
             <span nz-icon nzType="file-text" class="text-sm"></span>
             <span>Reports</span>
@@ -50,10 +46,10 @@
         </li>
       </ul>
 
-      <!-- Sidebar Footer Items -->
+      <!-- Sidebar Footer -->
       <div class="px-3 pb-6 space-y-4">
         <ul nz-menu nzMode="inline" class="bg-transparent border-none">
-          <li nz-menu-item nzMatchRouter class="my-1 rounded-xl">
+          <li *ngIf="(profile$ | async)?.role === 'Admin'" nz-menu-item nzMatchRouter class="my-1 rounded-xl !border-none">
             <a routerLink="/settings" class="flex items-center gap-3 text-xs uppercase tracking-[0.12em] font-semibold py-2.5">
               <span nz-icon nzType="setting" class="text-sm"></span>
               <span>Settings</span>
@@ -61,9 +57,12 @@
           </li>
         </ul>
 
-        <!-- User Profile display at sidebar bottom -->
+        <!-- User Profile Card -->
         <div class="flex items-center gap-3 px-4 py-3 border-t border-[var(--theme-border)] mt-4" *ngIf="profile$ | async as prof; else loadingProfileSidebar">
-          <nz-avatar nzIcon="user" class="bg-[var(--theme-glow)] text-[var(--theme-primary)] border border-[var(--theme-glow-hover)] shrink-0"></nz-avatar>
+          <div class="relative">
+            <nz-avatar nzIcon="user" class="bg-[var(--theme-glow)] text-[var(--theme-primary)] shrink-0" style="border: 2px solid var(--theme-primary); box-shadow: 0 0 12px var(--theme-glow);"></nz-avatar>
+            <div class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--theme-card)]"></div>
+          </div>
           <div class="flex flex-col min-w-0" *ngIf="!isCollapsed">
             <span class="text-xs text-[var(--theme-text-main)] font-semibold truncate">{{ prof.full_name || 'A. Sterling' }}</span>
             <span class="text-[9px] text-[var(--theme-text-muted)] font-bold uppercase tracking-wider truncate mt-0.5">{{ prof.role || 'VP Operations' }}</span>
@@ -73,8 +72,8 @@
           <div class="flex items-center gap-3 px-4 py-3 border-t border-[var(--theme-border)] mt-4">
             <nz-avatar nzIcon="user" class="bg-[var(--theme-panel)] border border-[var(--theme-border)] text-[var(--theme-text-muted)] shrink-0"></nz-avatar>
             <div class="flex flex-col min-w-0" *ngIf="!isCollapsed">
-              <span class="text-xs text-[var(--theme-text-muted)] font-semibold truncate">A. Sterling</span>
-              <span class="text-[9px] text-[var(--theme-text-muted)] font-bold uppercase tracking-wider truncate mt-0.5">VP Operations</span>
+              <div class="skeleton w-24 h-3 mb-1.5"></div>
+              <div class="skeleton w-16 h-2"></div>
             </div>
           </div>
         </ng-template>
@@ -83,19 +82,28 @@
   </nz-sider>
 
   <nz-layout class="bg-transparent relative">
-    <!-- Premium Header -->
-    <nz-header class="bg-[var(--theme-header-bg)] backdrop-blur-xl border-b border-[var(--theme-border)] h-20 flex items-center justify-between px-8 sticky top-0 z-50">
+    <!-- Premium Header with gradient bottom shimmer -->
+    <nz-header class="bg-[var(--theme-header-bg)] backdrop-blur-2xl border-b border-[var(--theme-border)] h-20 flex items-center justify-between px-8 sticky top-0 z-50 relative">
+      <!-- Animated gradient bottom border -->
+      <div class="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[var(--theme-primary)]/20 to-transparent"></div>
+      
       <div class="flex items-center gap-4">
-        <span class="trigger text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] cursor-pointer text-lg transition-colors mr-2" nz-icon [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'" (click)="isCollapsed = !isCollapsed"></span>
-        <h2 class="text-xl text-[var(--theme-text-main)] font-medium m-0 tracking-wide" style="font-family: 'Space Grotesk', sans-serif;">{{ activeTitle }}</h2>
+        <span class="trigger text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] cursor-pointer text-lg transition-all duration-300" nz-icon [nzType]="isCollapsed ? 'menu-unfold' : 'menu-fold'" (click)="isCollapsed = !isCollapsed"></span>
+        <div class="h-8 w-px bg-[var(--theme-border)] opacity-60"></div>
+        <div class="flex flex-col justify-center">
+          <h2 class="text-lg text-[var(--theme-primary)] font-bold m-0 tracking-wider uppercase" style="font-family: 'Outfit', sans-serif; line-height: 1.2;">{{ hotelName }}</h2>
+          <span class="text-[9px] text-[var(--theme-text-muted)] uppercase tracking-[0.25em] font-semibold mt-0.5" style="line-height: 1;">{{ activePageTitle }}</span>
+        </div>
       </div>
 
-      <div class="flex items-center gap-6" *ngIf="profile$ | async as prof; else loadingProfileHeader">
+      <div class="flex items-center gap-5" *ngIf="profile$ | async as prof; else loadingProfileHeader">
         <!-- Notification Bell -->
-        <span nz-icon nzType="bell" nzTheme="outline" class="text-lg text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] transition-colors cursor-pointer"></span>
+        <div class="relative cursor-pointer group">
+          <span nz-icon nzType="bell" nzTheme="outline" class="text-lg text-[var(--theme-text-muted)] group-hover:text-[var(--theme-primary)] transition-colors duration-300"></span>
+        </div>
 
         <!-- Theme Switcher -->
-        <a nz-dropdown [nzDropdownMenu]="themeMenu" nzPlacement="bottomRight" class="flex items-center text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] transition-colors cursor-pointer">
+        <a nz-dropdown [nzDropdownMenu]="themeMenu" nzPlacement="bottomRight" class="flex items-center text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] transition-colors duration-300 cursor-pointer">
           <span nz-icon nzType="bg-colors" class="text-lg"></span>
         </a>
         <nz-dropdown-menu #themeMenu="nzDropdownMenu">
@@ -111,25 +119,26 @@
           </ul>
         </nz-dropdown-menu>
 
-        <!-- User Avatar Dropdown -->
+        <!-- User Avatar -->
         <a nz-dropdown [nzDropdownMenu]="menu" nzPlacement="bottomRight" class="flex items-center">
-          <nz-avatar nzIcon="user" class="bg-[var(--theme-glow)] text-[var(--theme-primary)] border border-[var(--theme-glow-hover)] align-middle hover:bg-[var(--theme-primary)] hover:text-[var(--theme-bg)] transition-all duration-300"></nz-avatar>
+          <nz-avatar nzIcon="user" class="bg-[var(--theme-glow)] text-[var(--theme-primary)] align-middle hover:shadow-[0_0_16px_var(--theme-glow)] transition-all duration-300" style="border: 2px solid var(--theme-primary);"></nz-avatar>
         </a>
         <nz-dropdown-menu #menu="nzDropdownMenu">
-          <ul nz-menu class="bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-xl shadow-2xl overflow-hidden min-w-[180px] p-1">
-            <li class="px-4 py-2.5 border-b border-[var(--theme-border)] text-left pointer-events-none">
-              <p class="text-[10px] font-bold text-[var(--theme-text-main)] truncate m-0">{{ prof.full_name }}</p>
-              <p class="text-[8px] text-[var(--theme-text-muted)] uppercase tracking-widest truncate mt-0.5">{{ prof.role }}</p>
+          <ul nz-menu class="bg-[var(--theme-card)] border border-[var(--theme-border)] rounded-xl shadow-2xl overflow-hidden min-w-[200px] p-1">
+            <li class="px-4 py-3 border-b border-[var(--theme-border)] text-left pointer-events-none">
+              <p class="text-[11px] font-bold text-[var(--theme-text-main)] truncate m-0">{{ prof.full_name }}</p>
+              <p class="text-[9px] text-[var(--theme-text-muted)] uppercase tracking-widest truncate mt-0.5">{{ prof.role }}</p>
             </li>
-            <li nz-menu-item class="rounded-lg text-xs uppercase tracking-wider text-[var(--theme-text-main)] py-2 hover:bg-[var(--theme-border)] mt-1">Profile</li>
+            <li nz-menu-item class="rounded-lg text-xs uppercase tracking-wider text-[var(--theme-text-main)] py-2.5 hover:bg-[var(--theme-border)] mt-1">Profile</li>
+            <li nz-menu-item (click)="showPasswordModal()" class="rounded-lg text-xs uppercase tracking-wider text-[var(--theme-text-main)] py-2.5 hover:bg-[var(--theme-border)] mt-1">Change Password</li>
             <li nz-menu-divider class="border-[var(--theme-border)] my-1"></li>
-            <li nz-menu-item (click)="logout()" class="rounded-lg text-xs uppercase tracking-wider text-rose-500 hover:text-rose-400 py-2 hover:bg-rose-500/10">Logout</li>
+            <li nz-menu-item (click)="logout()" class="rounded-lg text-xs uppercase tracking-wider text-rose-500 hover:text-rose-400 py-2.5 hover:bg-rose-500/10">Logout</li>
           </ul>
         </nz-dropdown-menu>
       </div>
 
       <ng-template #loadingProfileHeader>
-        <div class="flex items-center gap-6">
+        <div class="flex items-center gap-5">
           <span nz-icon nzType="bell" nzTheme="outline" class="text-lg text-[var(--theme-text-muted)]"></span>
           <span nz-icon nzType="bg-colors" class="text-lg text-[var(--theme-text-muted)]"></span>
           <nz-avatar nzIcon="user" class="bg-[var(--theme-panel)] border border-[var(--theme-border)] text-[var(--theme-text-muted)] align-middle"></nz-avatar>
@@ -140,10 +149,10 @@
     <nz-content class="p-8 overflow-y-auto relative min-h-[calc(100vh-80px)]">
       <router-outlet></router-outlet>
       
-      <!-- Floating Action Button for Add Room with theme pulse effect -->
-      <button class="fixed bottom-8 right-8 flex items-center gap-2 bg-[var(--theme-primary)] text-black hover:bg-[var(--theme-primary-dark)] hover:text-black shadow-[0_0_20px_var(--theme-glow)] hover:shadow-[0_0_30px_var(--theme-glow-hover)] border-none z-50 h-14 px-6 text-xs uppercase tracking-[0.15em] font-semibold rounded-full transition-all duration-300 cursor-pointer"
+      <!-- Floating Action Button -->
+      <button class="fixed bottom-8 right-8 flex items-center gap-2 bg-[var(--theme-primary)] text-black hover:bg-[var(--theme-primary-dark)] hover:text-black shadow-[0_0_20px_var(--theme-glow)] hover:shadow-[0_0_35px_var(--theme-glow)] border-none z-50 h-14 px-6 text-xs uppercase tracking-[0.15em] font-semibold rounded-full transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95"
               (click)="handleAddRoomClick()">
-        <span nz-icon nzType="plus"></span> Add Room
+        <span nz-icon nzType="calendar"></span> New Booking
       </button>
 
       <!-- Daily Entry Modal -->
@@ -173,70 +182,67 @@
 
         <ng-container *nzModalContent>
           <form nz-form nzLayout="vertical" [formGroup]="dailyEntryForm" class="p-2">
-            <!-- Row 1: Mandatory fields (Entry Date, Rooms Sold, Total Revenue) -->
-            <div nz-row [nzGutter]="16">
-              <div nz-col nzXs="24" nzSm="8">
-                <nz-form-item class="mb-3">
-                  <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Entry Date</nz-form-label>
-                  <nz-form-control nzErrorTip="Please select the date">
-                    <nz-date-picker formControlName="entry_date" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
-                  </nz-form-control>
-                </nz-form-item>
-              </div>
-              <div nz-col nzXs="24" nzSm="8">
-                <nz-form-item class="mb-3">
-                  <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Rooms Sold (Total)</nz-form-label>
-                  <nz-form-control>
-                    <nz-input-number formControlName="rooms_sold" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                  </nz-form-control>
-                </nz-form-item>
-              </div>
-              <div nz-col nzXs="24" nzSm="8">
-                <nz-form-item class="mb-3">
-                  <nz-form-label nzRequired class="text-[var(--theme-text-main)]/80 font-medium">Total Revenue</nz-form-label>
-                  <nz-form-control nzErrorTip="Please input total revenue">
-                    <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
-                      <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
-                      <input type="number" nz-input formControlName="total_revenue" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
-                    </div>
-                  </nz-form-control>
-                </nz-form-item>
-              </div>
-            </div>
+            <div nz-row [nzGutter]="[16, 12]">
+              <ng-container *ngFor="let field of popupFields">
+                <ng-container *ngIf="field.visible && field.key !== 'vacant_rooms' && field.key !== 'total_rooms_available'">
+                  <div nz-col nzXs="24" nzSm="12" [nzMd]="field.key === 'notes' ? 24 : 8">
+                    <ng-container [ngSwitch]="field.key">
+                      
+                      <!-- Entry Date -->
+                      <nz-form-item *ngSwitchCase="'entry_date'" class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory('entry_date')" class="text-[var(--theme-text-main)] opacity-80 font-medium">Entry Date</nz-form-label>
+                        <nz-form-control nzErrorTip="Please select the date">
+                          <nz-date-picker formControlName="entry_date" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
+                        </nz-form-control>
+                      </nz-form-item>
+ 
+                      <!-- Rooms Sold -->
+                      <nz-form-item *ngSwitchCase="'rooms_sold'" class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory('rooms_sold')" class="text-[var(--theme-text-main)] opacity-80 font-medium">Rooms Sold (Total)</nz-form-label>
+                        <nz-form-control>
+                          <nz-input-number formControlName="rooms_sold" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
+                        </nz-form-control>
+                      </nz-form-item>
+ 
+                      <!-- Total Revenue -->
+                      <nz-form-item *ngSwitchCase="'total_revenue'" class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory('total_revenue')" class="text-[var(--theme-text-main)] opacity-80 font-medium">Total Revenue</nz-form-label>
+                        <nz-form-control nzErrorTip="Please input total revenue">
+                          <div class="rupee-input-wrapper relative w-full h-10 flex items-center">
+                            <span class="absolute left-4 text-[var(--theme-primary)] pointer-events-none font-medium z-10">₹</span>
+                            <input type="number" nz-input formControlName="total_revenue" placeholder="0.00" class="!pl-10 bg-transparent border border-[var(--theme-border)] rounded-xl text-[var(--theme-text-main)] h-full w-full hover:border-[var(--theme-primary)] focus:border-transparent focus:shadow-[0px_4px_20px_var(--theme-glow),_inset_0px_-2px_0px_var(--theme-primary)] transition-all" />
+                          </div>
+                        </nz-form-control>
+                      </nz-form-item>
+ 
+                      <!-- Total Guests -->
+                      <nz-form-item *ngSwitchCase="'total_guests'" class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory('total_guests')" class="text-[var(--theme-text-main)] opacity-80 font-medium">Total Guests</nz-form-label>
+                        <nz-form-control nzErrorTip="Please enter total guests">
+                          <nz-input-number formControlName="total_guests" [nzMin]="0" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" [nzPlaceHolder]="isColumnMandatory('total_guests') ? 'Enter total guests' : 'Optional'"></nz-input-number>
+                        </nz-form-control>
+                      </nz-form-item>
+ 
+                      <!-- Notes -->
+                      <nz-form-item *ngSwitchCase="'notes'" class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory('notes')" class="text-[var(--theme-text-main)] opacity-80 font-medium">Notes / Remarks</nz-form-label>
+                        <nz-form-control nzErrorTip="Please enter notes/remarks">
+                          <input nz-input formControlName="notes" [placeholder]="isColumnMandatory('notes') ? 'Enter daily audit remarks' : 'Any special notes for today...'" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+                        </nz-form-control>
+                      </nz-form-item>
+                      
+                      <!-- Dynamic Room Categories -->
+                      <nz-form-item *ngSwitchDefault class="mb-0">
+                        <nz-form-label [nzRequired]="isColumnMandatory(field.key)" class="text-[var(--theme-text-main)] opacity-80 font-medium overflow-hidden text-ellipsis whitespace-nowrap">{{ field.label }}</nz-form-label>
+                        <nz-form-control [nzErrorTip]="'Max ' + getRoomLimit(field.key)">
+                          <nz-input-number [formControlName]="field.key" [nzMin]="0" [nzMax]="getRoomLimit(field.key)" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
+                        </nz-form-control>
+                      </nz-form-item>
 
-            <!-- Row 2: Optional fields (Total Guests, Notes / Remarks) -->
-            <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
-              <div nz-col nzXs="24" nzSm="8">
-                <nz-form-item class="mb-3">
-                  <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Total Guests</nz-form-label>
-                  <nz-form-control>
-                    <nz-input-number formControlName="total_guests" [nzMin]="0" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="Optional"></nz-input-number>
-                  </nz-form-control>
-                </nz-form-item>
-              </div>
-              <div nz-col nzXs="24" nzSm="16">
-                <nz-form-item class="mb-3">
-                  <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">Notes / Remarks</nz-form-label>
-                  <nz-form-control>
-                    <input nz-input formControlName="notes" placeholder="Any special notes for today..." class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                  </nz-form-control>
-                </nz-form-item>
-              </div>
-            </div>
-
-            <!-- Row 3: Room Category Breakdown (Optional) -->
-            <div class="border-t border-[var(--theme-border)] my-3 pt-3" *ngIf="roomTypes && roomTypes.length > 0">
-              <div class="text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--theme-text-muted)] mb-2" style="font-family: 'Hanken Grotesk', sans-serif;">Room Category Breakdown</div>
-              <div nz-row [nzGutter]="16">
-                <div nz-col nzXs="24" [nzSm]="roomTypes.length === 3 ? 8 : (roomTypes.length === 2 ? 12 : (roomTypes.length === 1 ? 24 : 6))" *ngFor="let type of roomTypes">
-                  <nz-form-item class="mb-3">
-                    <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium overflow-hidden text-ellipsis whitespace-nowrap">{{ type }}</nz-form-label>
-                    <nz-form-control [nzErrorTip]="'Max ' + (roomConfig[type] || 0)">
-                      <nz-input-number [formControlName]="type" [nzMin]="0" [nzMax]="roomConfig[type]" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                    </nz-form-control>
-                  </nz-form-item>
-                </div>
-              </div>
+                    </ng-container>
+                  </div>
+                </ng-container>
+              </ng-container>
             </div>
           </form>
         </ng-container>
@@ -410,13 +416,13 @@
   <ng-template #checkoutConfirmFooter>
     <div class="flex justify-end gap-3 w-full flex-shrink-0">
       <button nz-button 
-              class="rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all flex-shrink-0" 
+              class="rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all flex-shrink-0 hover:!text-[var(--theme-text-main)] focus:!text-[var(--theme-text-main)] active:!text-[var(--theme-text-main)] hover:!border-[var(--theme-primary)]" 
               style="background: rgba(128,128,128,0.15); border: 1px solid var(--theme-border); color: var(--theme-text-main);"
               (click)="isCheckoutConfirmVisible = false">
         Cancel
       </button>
       <button nz-button [nzLoading]="isSavingCheckout" 
-              class="bg-emerald-600 hover:bg-emerald-500 text-white border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.3)] transition-all flex-shrink-0" 
+              class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black hover:!text-black focus:!text-black active:!text-black border-none hover:!border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex-shrink-0" 
               (click)="confirmCheckout()">
         Confirm Checkout
       </button>
@@ -431,6 +437,38 @@
         <div class="text-xs text-[var(--theme-text-muted)] mt-0.5">Room {{ checkoutConfirmBooking.room_number }} ({{ checkoutConfirmBooking.room_category }})</div>
       </div>
 
+      <!-- Billing Breakdown -->
+      <div class="bg-[var(--theme-border)]/10 p-4 rounded-xl border border-[var(--theme-border)] space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-[var(--theme-text-muted)] font-medium">Amount Paid at Check-In (Total Amount)</span>
+          <span class="text-sm font-bold text-emerald-400">₹ {{ checkoutConfirmBooking?.amount_paid || 0 }}</span>
+        </div>
+        
+        <div class="w-full h-px bg-[var(--theme-border)]/50 my-2"></div>
+        
+        <div class="flex justify-between items-center" *ngIf="getCheckoutPendingBalance() > 0">
+          <div class="flex items-center gap-2">
+            <span nz-icon nzType="warning" class="text-rose-500"></span>
+            <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider">Amount Due</span>
+          </div>
+          <span class="text-lg font-black text-rose-500">₹ {{ getCheckoutPendingBalance() }}</span>
+        </div>
+
+        <div class="flex justify-between items-center" *ngIf="getCheckoutPendingBalance() <= 0">
+          <div class="flex items-center gap-2">
+            <span nz-icon nzType="check-circle" class="text-emerald-500"></span>
+            <span class="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Account Status</span>
+          </div>
+          <span class="text-sm font-bold text-emerald-500">Fully Paid</span>
+        </div>
+      </div>
+
+      <!-- Payment Collection -->
+      <div class="space-y-2" *ngIf="getCheckoutPendingBalance() > 0">
+        <label class="text-xs font-bold text-[var(--theme-text-muted)] uppercase tracking-wider block">Collect Pending Amount (₹)</label>
+        <nz-input-number [(ngModel)]="checkoutPaymentAmount" [nzMin]="0" [nzMax]="getCheckoutPendingBalance()" [nzStep]="100" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" nzPlaceHolder="₹ 0"></nz-input-number>
+      </div>
+
       <div class="space-y-2">
         <label class="text-xs font-bold text-[var(--theme-text-muted)] uppercase tracking-wider block">Confirm Actual Checkout Date & Time</label>
         <nz-date-picker [(ngModel)]="confirmCheckoutDate" 
@@ -440,4 +478,30 @@
       </div>
     </div>
   </ng-container>
+</nz-modal>
+
+<!-- Password Change Modal -->
+<nz-modal
+  [(nzVisible)]="isPasswordModalVisible"
+  nzTitle="Change Password"
+  (nzOnCancel)="handlePasswordCancel()"
+  [nzFooter]="passwordModalFooter"
+  [nzWidth]="400"
+  nzClassName="dark-theme-modal">
+  <ng-container *nzModalContent>
+    <div class="mb-6">
+      <p class="text-sm text-[var(--theme-text-muted)]">Enter your new secure password. It must be at least 6 characters long.</p>
+    </div>
+    <form nz-form [formGroup]="passwordForm" (ngSubmit)="handlePasswordSave()">
+      <nz-form-item>
+        <nz-form-control nzErrorTip="Please enter a new password (min 6 chars)">
+          <input nz-input type="password" formControlName="newPassword" placeholder="New Password" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)] px-4" />
+        </nz-form-control>
+      </nz-form-item>
+    </form>
+  </ng-container>
+  <ng-template #passwordModalFooter>
+    <button nz-button nzType="default" (click)="handlePasswordCancel()" class="border-[var(--theme-border)] text-[var(--theme-text-main)] hover:text-[var(--theme-primary)] hover:border-[var(--theme-primary)] bg-transparent rounded-lg">Cancel</button>
+    <button nz-button nzType="primary" [nzLoading]="isPasswordLoading" (click)="handlePasswordSave()" class="bg-gradient-to-r from-[var(--theme-primary-dark)] to-[var(--theme-primary)] border-none text-black hover:opacity-90 rounded-lg">Update Password</button>
+  </ng-template>
 </nz-modal>

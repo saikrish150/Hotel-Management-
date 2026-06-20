@@ -1,0 +1,327 @@
+
+    <div class="space-y-8 pb-10">
+      <!-- Settings Header -->
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
+        <div>
+          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">System Settings</h2>
+          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Configuration and Preferences Console</p>
+        </div>
+      </div>
+
+      <!-- Dynamic Room Configuration Stats -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-entrance-1">
+        
+        <!-- KPI Cards Grid -->
+        <div class="lg:col-span-2 grid grid-cols-3 gap-4">
+          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
+            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Total Configured Units</span>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalRooms }} <span class="text-xs text-[var(--theme-text-muted)]">Rooms</span></h3>
+            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-500/5 blur-xl rounded-full pointer-events-none"></div>
+          </div>
+          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
+            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Room Categories</span>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalCategories }}</h3>
+            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/5 blur-xl rounded-full pointer-events-none"></div>
+          </div>
+          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
+            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Avg. Capacity / Type</span>
+            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ averageCapacity }}</h3>
+            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-500/5 blur-xl rounded-full pointer-events-none"></div>
+          </div>
+        </div>
+
+        <!-- Room Types Distribution Progress Layout -->
+        <div class="glass-card p-5 flex flex-col justify-between animate-entrance-2">
+          <div class="mb-3">
+            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase block">Room Inventory Allocation Ratios</span>
+            <p class="text-[10px] text-[var(--theme-text-muted)] font-normal mt-0.5">Ratio of each category's capacity in the total registered inventory</p>
+          </div>
+          <div class="space-y-2.5 flex-1 flex flex-col justify-center">
+            <div *ngFor="let room of roomTypesDistribution" class="space-y-1">
+              <div class="flex justify-between text-[11px] font-semibold">
+                <span class="text-[var(--theme-text-muted)]">{{ room.key }}</span>
+                <span class="text-[var(--theme-text-main)]">{{ room.pct }}% <span class="text-[9px] text-[var(--theme-text-muted)] font-light">({{ room.limit }} rooms)</span></span>
+              </div>
+              <div class="w-full h-1 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
+                <div class="h-full rounded-full" [style.background-color]="room.color" [style.width.%]="room.pct"></div>
+              </div>
+            </div>
+            <div *ngIf="roomTypes.length === 0" class="text-center text-xs text-[var(--theme-text-muted)] font-light">
+              No categories to display
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Room Inventory Configuration Console -->
+      <div class="glass-card p-8 relative overflow-hidden animate-entrance-3">
+        <div class="flex justify-between items-start mb-6 border-b border-[var(--theme-border)] pb-4">
+          <div>
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium section-header">Room Inventory Configuration</h3>
+            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Manage room categories, edit capacities, and add new room inventory to the system.</p>
+          </div>
+          <button nz-button 
+                  [nzLoading]="isSaving" 
+                  (click)="saveConfiguration()"
+                  class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2">
+            <span nz-icon nzType="save" nzTheme="outline"></span> Save Configuration
+          </button>
+        </div>
+
+        <nz-spin [nzSpinning]="isSaving">
+          <div class="space-y-6">
+            
+            <!-- Existing Rooms Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-[var(--theme-border)]">
+                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider pl-3">ROOM CATEGORY</th>
+                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">ROOM NUMBERS (COMMA SEPARATED)</th>
+                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider w-40">TOTAL CAPACITY</th>
+                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider w-24 text-right sticky right-0 bg-[var(--theme-bg)] z-10">ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody class="text-sm">
+                  <tr *ngFor="let room of roomTypes" class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-card)]/40 hover:shadow-lg transition-all group">
+                    <td class="py-4 font-medium text-[var(--theme-text-main)] pl-3">{{ room.key }}</td>
+                    <td class="py-4">
+                      <input nz-input 
+                             [(ngModel)]="room.roomsListStr" 
+                             (ngModelChange)="onRoomsListChange(room)" 
+                             placeholder="e.g. 101, 102, 103 (Optional)" 
+                             class="w-full max-w-[280px] h-9 rounded-lg bg-transparent text-[var(--theme-text-main)]" />
+                    </td>
+                    <td class="py-4">
+                      <nz-input-number [(ngModel)]="room.limit" 
+                                       [nzMin]="1" 
+                                       [nzStep]="1" 
+                                       [nzDisabled]="(room.roomsListStr || '').trim().length > 0" 
+                                       class="w-28 rounded-lg bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
+                    </td>
+                    <td class="py-4 text-right sticky right-0 bg-[var(--theme-bg)] z-10">
+                      <button nz-button nzType="text" nzDanger (click)="deleteCategory(room.key)" class="hover:bg-red-500/10 p-1 rounded-lg">
+                        <span nz-icon nzType="delete" nzTheme="outline"></span>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="roomTypes.length === 0">
+                    <td colspan="4" class="py-8 text-center text-[var(--theme-text-muted)]">
+                      No room categories configured yet. Add one below.
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Add New Room Category Form -->
+            <div class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] rounded-2xl p-6 mt-6">
+              <h4 class="text-xs font-bold text-[var(--theme-text-main)] uppercase tracking-wider mb-4">Add Room Category</h4>
+              <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                <div class="md:col-span-4 space-y-2">
+                  <label class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Category Name</label>
+                  <input nz-input [(ngModel)]="newCategoryName" placeholder="e.g. Deluxe Suite" class="h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+                </div>
+                <div class="md:col-span-4 space-y-2">
+                  <label class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Room Numbers (Comma Separated)</label>
+                  <input nz-input [(ngModel)]="newCategoryRoomsListStr" (ngModelChange)="onNewCategoryRoomsListChange()" placeholder="e.g. 101, 102, 103 (Optional)" class="h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+                </div>
+                <div class="md:col-span-2 space-y-2">
+                  <label class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Total Capacity</label>
+                  <nz-input-number [(ngModel)]="newCategoryLimit" [nzMin]="1" [nzStep]="1" [nzDisabled]="(newCategoryRoomsListStr || '').trim().length > 0" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
+                </div>
+                <div class="md:col-span-2">
+                  <button nz-button (click)="addCategory()" class="w-full h-10 bg-transparent border border-[var(--theme-primary)]/50 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 hover:text-[var(--theme-primary)] rounded-xl font-semibold text-xs uppercase tracking-wider transition-all">
+                    <span nz-icon nzType="plus" nzTheme="outline"></span> Add Category
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </nz-spin>
+      </div>
+
+      <!-- Table & Form Preferences Console -->
+      <div class="glass-card p-8 relative overflow-hidden animate-entrance-4 mt-8">
+        <div class="flex justify-between items-start mb-6 border-b border-[var(--theme-border)] pb-4">
+          <div>
+            <h3 class="text-lg text-[var(--theme-text-main)] font-medium section-header">Table & Form Preferences</h3>
+            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Configure default sorting options and form validation rules for each module.</p>
+          </div>
+          <button nz-button 
+                  [nzLoading]="isSaving" 
+                  (click)="savePreferences()"
+                  class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2">
+            <span nz-icon nzType="save" nzTheme="outline"></span> Save Preferences
+          </button>
+        </div>
+
+        <nz-tabset [nzAnimated]="false" class="custom-dark-tabs mt-2">
+          
+          <!-- Bookings Preferences -->
+          <nz-tab nzTitle="Bookings Module">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+              <!-- Table Columns -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Table Columns</span>
+                  <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Visibility & Order</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of bookingsTableList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[120px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-4">
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Show</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
+                        <button (click)="moveSettingsColumn(bookingsTableList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(bookingsTableList, idx, 'down')" [disabled]="idx === bookingsTableList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Popup Fields -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Popup Fields</span>
+                  <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Settings & Order</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of bookingsPopupList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[90px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-3">
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Visible">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Vis</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Required">
+                        <input type="checkbox" [(ngModel)]="col.mandatory" class="w-3.5 h-3.5 rounded accent-rose-500" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Req</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity ml-1">
+                        <button (click)="moveSettingsColumn(bookingsPopupList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(bookingsPopupList, idx, 'down')" [disabled]="idx === bookingsPopupList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nz-tab>
+
+          <!-- Daily Entries Preferences -->
+          <nz-tab nzTitle="Daily Entries Module">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+              <!-- Table Columns -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Table Columns</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of dailyTableList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[120px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-4">
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Show</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
+                        <button (click)="moveSettingsColumn(dailyTableList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(dailyTableList, idx, 'down')" [disabled]="idx === dailyTableList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Popup Fields -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Popup Fields</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of dailyPopupList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[90px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-3">
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Visible">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Vis</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Required">
+                        <input type="checkbox" [(ngModel)]="col.mandatory" class="w-3.5 h-3.5 rounded accent-rose-500" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Req</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity ml-1">
+                        <button (click)="moveSettingsColumn(dailyPopupList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(dailyPopupList, idx, 'down')" [disabled]="idx === dailyPopupList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nz-tab>
+
+          <!-- Expenses Preferences -->
+          <nz-tab nzTitle="Expenses Module">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+              <!-- Table Columns -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Table Columns</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of expensesTableList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[120px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-4">
+                      <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Show</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity">
+                        <button (click)="moveSettingsColumn(expensesTableList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(expensesTableList, idx, 'down')" [disabled]="idx === expensesTableList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Popup Fields -->
+              <div>
+                <div class="flex items-center justify-between mb-3 px-1">
+                  <span class="text-[10px] font-bold text-[var(--theme-text-main)] opacity-80 uppercase tracking-wider">Popup Fields</span>
+                </div>
+                <div class="flex flex-col gap-1 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div *ngFor="let col of expensesPopupList; let idx = index" class="group flex items-center justify-between rounded-lg py-1.5 px-2 hover:bg-[var(--theme-card)]/40 transition-colors border border-transparent hover:border-[var(--theme-border)]">
+                    <span class="text-xs font-medium text-[var(--theme-text-main)] truncate max-w-[90px]">{{ col.label }}</span>
+                    <div class="flex items-center gap-3">
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Visible">
+                        <input type="checkbox" [(ngModel)]="col.visible" class="w-3.5 h-3.5 rounded accent-[var(--theme-primary)]" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Vis</span>
+                      </label>
+                      <label class="flex items-center gap-1.5 cursor-pointer" title="Required">
+                        <input type="checkbox" [(ngModel)]="col.mandatory" class="w-3.5 h-3.5 rounded accent-rose-500" />
+                        <span class="text-[9px] uppercase font-bold text-[var(--theme-text-muted)]">Req</span>
+                      </label>
+                      <div class="flex flex-col gap-0.5 opacity-30 group-hover:opacity-100 transition-opacity ml-1">
+                        <button (click)="moveSettingsColumn(expensesPopupList, idx, 'up')" [disabled]="idx === 0" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-up" class="text-[10px]"></span></button>
+                        <button (click)="moveSettingsColumn(expensesPopupList, idx, 'down')" [disabled]="idx === expensesPopupList.length - 1" class="text-[var(--theme-text-muted)] hover:text-[var(--theme-text-main)] disabled:opacity-30 p-0 leading-none"><span nz-icon nzType="caret-down" class="text-[10px]"></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nz-tab>
+
+        </nz-tabset>
+      </div>
+    </div>
+  

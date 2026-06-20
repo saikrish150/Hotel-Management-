@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './features/auth/login/login.component';
 import { LayoutComponent } from './core/layout/layout.component';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 import { DailyEntriesComponent } from './features/daily-entries/daily-entries.component';
 import { BookingsComponent } from './features/bookings/bookings.component';
@@ -21,10 +22,25 @@ export const routes: Routes = [
       { path: 'daily-entries', component: DailyEntriesComponent },
       { path: 'bookings', component: BookingsComponent },
       { path: 'expenses', component: ExpensesComponent },
-      { path: 'analytics', component: AnalyticsComponent },
-      { path: 'reports', component: ReportsComponent },
-      { path: 'settings', component: SettingsComponent },
-      { path: '', redirectTo: 'analytics', pathMatch: 'full' }
+      { 
+        path: 'analytics', 
+        component: AnalyticsComponent,
+        canActivate: [roleGuard],
+        data: { allowedRoles: ['Admin'] }
+      },
+      { 
+        path: 'reports', 
+        component: ReportsComponent,
+        canActivate: [roleGuard],
+        data: { allowedRoles: ['Admin'] }
+      },
+      { 
+        path: 'settings', 
+        component: SettingsComponent,
+        canActivate: [roleGuard],
+        data: { allowedRoles: ['Admin'] }
+      },
+      { path: '', redirectTo: 'bookings', pathMatch: 'full' }
     ]
   },
   { path: '**', redirectTo: 'login' }

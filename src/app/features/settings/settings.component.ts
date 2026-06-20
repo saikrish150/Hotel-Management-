@@ -8,6 +8,7 @@ import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSpinModule } from 'ng-zorro-antd/spin';
+import { NzTabsModule } from 'ng-zorro-antd/tabs';
 
 @Component({
   selector: 'app-settings',
@@ -19,169 +20,57 @@ import { NzSpinModule } from 'ng-zorro-antd/spin';
     NzIconModule, 
     NzInputModule, 
     NzInputNumberModule, 
-    NzSpinModule
+    NzSpinModule,
+    NzTabsModule
   ],
-  template: `
-    <div class="space-y-8 pb-10">
-      <!-- Settings Header -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
-        <div>
-          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">System Settings</h2>
-          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Configuration and Preferences Console</p>
-        </div>
-      </div>
-
-      <!-- Dynamic Room Configuration Stats -->
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        <!-- KPI Cards Grid -->
-        <div class="lg:col-span-2 grid grid-cols-3 gap-4">
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Total Configured Units</span>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalRooms }} <span class="text-xs text-[var(--theme-text-muted)]">Rooms</span></h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-blue-500/5 blur-xl rounded-full"></div>
-          </div>
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Room Categories</span>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ totalCategories }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-[var(--theme-primary)]/5 blur-xl rounded-full"></div>
-          </div>
-          <div class="glass-card flex flex-col justify-between min-h-[110px] p-5 relative overflow-hidden">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase">Avg. Capacity / Type</span>
-            <h3 class="text-3xl text-[var(--theme-text-main)] font-medium mt-4">{{ averageCapacity }}</h3>
-            <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-emerald-500/5 blur-xl rounded-full"></div>
-          </div>
-        </div>
-
-        <!-- Room Types Distribution Progress Layout -->
-        <div class="glass-card p-5 flex flex-col justify-between">
-          <div class="mb-3">
-            <span class="text-[9px] text-[var(--theme-text-muted)] font-bold tracking-wider uppercase block">Room Inventory Allocation Ratios</span>
-            <p class="text-[10px] text-[var(--theme-text-muted)] font-normal mt-0.5">Ratio of each category's capacity in the total registered inventory</p>
-          </div>
-          <div class="space-y-2.5 flex-1 flex flex-col justify-center">
-            <div *ngFor="let room of roomTypesDistribution" class="space-y-1">
-              <div class="flex justify-between text-[11px] font-semibold">
-                <span class="text-[var(--theme-text-muted)]">{{ room.key }}</span>
-                <span class="text-[var(--theme-text-main)]">{{ room.pct }}% <span class="text-[9px] text-[var(--theme-text-muted)] font-light">({{ room.limit }} rooms)</span></span>
-              </div>
-              <div class="w-full h-1 bg-[var(--theme-border)]/20 rounded-full overflow-hidden">
-                <div class="h-full rounded-full" [style.background-color]="room.color" [style.width.%]="room.pct"></div>
-              </div>
-            </div>
-            <div *ngIf="roomTypes.length === 0" class="text-center text-xs text-[var(--theme-text-muted)] font-light">
-              No categories to display
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Room Inventory Configuration Console -->
-      <div class="glass-card p-8 relative overflow-hidden">
-        <div class="flex justify-between items-start mb-6 border-b border-[var(--theme-border)] pb-4">
-          <div>
-            <h3 class="text-lg text-[var(--theme-text-main)] font-medium">Room Inventory Configuration</h3>
-            <p class="text-[11px] text-[var(--theme-text-muted)] font-medium mt-1">Manage room categories, edit capacities, and add new room inventory to the system.</p>
-          </div>
-          <button nz-button 
-                  [nzLoading]="isSaving" 
-                  (click)="saveConfiguration()"
-                  class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2">
-            <span nz-icon nzType="save" nzTheme="outline"></span> Save Configuration
-          </button>
-        </div>
-
-        <nz-spin [nzSpinning]="isSaving">
-          <div class="space-y-6">
-            
-            <!-- Existing Rooms Table -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="border-b border-[var(--theme-border)]">
-                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">ROOM CATEGORY</th>
-                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider w-40">TOTAL CAPACITY</th>
-                    <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider w-24 text-right">ACTIONS</th>
-                  </tr>
-                </thead>
-                <tbody class="text-sm">
-                  <tr *ngFor="let room of roomTypes" class="border-b border-[var(--theme-border)] hover:bg-[var(--theme-border)]/10 transition-colors">
-                    <td class="py-4 font-medium text-[var(--theme-text-main)]">{{ room.key }}</td>
-                    <td class="py-4">
-                      <nz-input-number [(ngModel)]="room.limit" [nzMin]="1" [nzStep]="1" class="w-28 rounded-lg bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                    </td>
-                    <td class="py-4 text-right">
-                      <button nz-button nzType="text" nzDanger (click)="deleteCategory(room.key)" class="hover:bg-red-500/10 p-1 rounded-lg">
-                        <span nz-icon nzType="delete" nzTheme="outline"></span>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr *ngIf="roomTypes.length === 0">
-                    <td colspan="3" class="py-8 text-center text-[var(--theme-text-muted)]">
-                      No room categories configured yet. Add one below.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Add New Room Category Form -->
-            <div class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] rounded-2xl p-6 mt-6">
-              <h4 class="text-xs font-bold text-[var(--theme-text-main)] uppercase tracking-wider mb-4">Add Room Category</h4>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                <div class="space-y-2">
-                  <label class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Category Name</label>
-                  <input nz-input [(ngModel)]="newCategoryName" placeholder="e.g. Deluxe Suite" class="h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
-                </div>
-                <div class="space-y-2">
-                  <label class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider">Max Capacity / Rooms</label>
-                  <nz-input-number [(ngModel)]="newCategoryLimit" [nzMin]="1" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-input-number>
-                </div>
-                <div>
-                  <button nz-button (click)="addCategory()" class="w-full h-10 bg-transparent border border-[var(--theme-primary)]/50 text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/10 hover:text-[var(--theme-primary)] rounded-xl font-semibold text-xs uppercase tracking-wider transition-all">
-                    <span nz-icon nzType="plus" nzTheme="outline"></span> Add Category
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </nz-spin>
-      </div>
-    </div>
-  `,
-  styles: [`
-    :ng-deep .ant-input-number {
-      background-color: transparent !important;
-      border-color: var(--theme-border) !important;
-    }
-    :ng-deep .ant-input-number-input {
-      color: var(--theme-text-main) !important;
-    }
-    :ng-deep .ant-input-number-handler-wrap {
-      background-color: var(--theme-border) !important;
-      border-left: 1px solid var(--theme-border) !important;
-    }
-    :ng-deep .ant-input-number-handler {
-      border-top: 1px solid var(--theme-border) !important;
-    }
-    :ng-deep .ant-input-number-handler-up-inner, 
-    :ng-deep .ant-input-number-handler-down-inner {
-      color: var(--theme-text-muted) !important;
-    }
-  `]
+  templateUrl: './settings.component.html',
+  styleUrl: './settings.component.css'
 })
 export class SettingsComponent implements OnInit {
   roomConfig: any = {};
-  roomTypes: { key: string; limit: number }[] = [];
+  roomTypes: { key: string; limit: number; roomsListStr: string }[] = [];
   hotelId: string = '';
   isSaving = false;
 
   newCategoryName = '';
+  newCategoryRoomsListStr = '';
   newCategoryLimit = 1;
 
+  columnConfig: any = {};
+  bookingsSortColumn = 'check_in';
+  bookingsSortDirection = 'desc';
+  bookingsMandatoryEditCheck = false;
+
+  dailySortColumn = 'entry_date';
+  dailySortDirection = 'desc';
+  dailyMandatoryEditCheck = false;
+
+  expensesSortColumn = 'month_year';
+  expensesSortDirection = 'desc';
+  expensesMandatoryEditCheck = false;
+
+  bookingsTableList: any[] = [];
+  bookingsPopupList: any[] = [];
+  dailyTableList: any[] = [];
+  dailyPopupList: any[] = [];
+  expensesTableList: any[] = [];
+  expensesPopupList: any[] = [];
   categoryColors = ['var(--theme-primary)', '#38bdf8', '#f59e0b', '#ec4899', '#a855f7', '#14b8a6', '#f43f5e', '#10b981'];
+
+  moveSettingsColumn(list: any[], index: number, direction: 'up' | 'down') {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
+    const temp = list[index];
+    list[index] = list[targetIndex];
+    list[targetIndex] = temp;
+    // trigger change detection
+    if (list === this.bookingsTableList) this.bookingsTableList = [...list];
+    if (list === this.bookingsPopupList) this.bookingsPopupList = [...list];
+    if (list === this.dailyTableList) this.dailyTableList = [...list];
+    if (list === this.dailyPopupList) this.dailyPopupList = [...list];
+    if (list === this.expensesTableList) this.expensesTableList = [...list];
+    if (list === this.expensesPopupList) this.expensesPopupList = [...list];
+  }
 
   // Computed statistics getters
   get totalRooms(): number {
@@ -216,25 +105,223 @@ export class SettingsComponent implements OnInit {
       if (profile) {
         this.hotelId = profile.hotel_id || '';
         this.roomConfig = profile.room_config || {};
-        
-        let keys: string[] = [];
+        this.columnConfig = profile.column_config || {};
+
+        // Load Bookings preferences
+        const bConf = this.columnConfig.bookings || {};
+        this.bookingsSortColumn = bConf.sort_column || 'check_in';
+        this.bookingsSortDirection = bConf.sort_direction || 'desc';
+        this.bookingsMandatoryEditCheck = bConf.mandatory_edit_check || false;
+
+        const defaultBookingCols = [
+          { key: 'check_in', label: 'Check-In', visible: true, mandatory: true },
+          { key: 'room_number', label: 'Room No', visible: true, mandatory: true },
+          { key: 'room_category', label: 'Category', visible: true, mandatory: false },
+          { key: 'booking_source', label: 'Booking Source', visible: true, mandatory: false },
+          { key: 'guest_name', label: 'Guest Name', visible: true, mandatory: true },
+          { key: 'address', label: 'Address', visible: true, mandatory: false },
+          { key: 'id_number', label: 'ID Number', visible: true, mandatory: false },
+          { key: 'phone_number', label: 'Phone Number', visible: true, mandatory: false },
+          { key: 'company_name', label: 'Company Name', visible: false, mandatory: false },
+          { key: 'gst_number', label: 'GST Number', visible: false, mandatory: false },
+          { key: 'number_of_people', label: 'People', visible: true, mandatory: true },
+          { key: 'number_of_days', label: 'Days', visible: true, mandatory: true },
+          { key: 'total_amount', label: 'Amount Due', visible: true, mandatory: false },
+          { key: 'amount_paid', label: 'Total Amount', visible: true, mandatory: false },
+          { key: 'check_out', label: 'Scheduled Check-Out', visible: true, mandatory: true },
+          { key: 'actual_checkout', label: 'Actual Check-Out', visible: true, mandatory: false },
+          { key: 'notes', label: 'Notes', visible: false, mandatory: false },
+          { key: 'id_documents', label: 'Attachments', visible: true, mandatory: false },
+          { key: 'status', label: 'Status', visible: true, mandatory: true }
+        ];
+
+        let savedBookingTable = bConf.table || [];
+        this.bookingsTableList = defaultBookingCols.map(def => {
+          const saved = savedBookingTable.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedBookingTable.length > 0) {
+          const orderMap = new Map<string, number>(savedBookingTable.map((c: any, index: number) => [c.key, index]));
+          this.bookingsTableList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        let savedBookingPopup = bConf.popup || [];
+        this.bookingsPopupList = defaultBookingCols.map(def => {
+          const saved = savedBookingPopup.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedBookingPopup.length > 0) {
+          const orderMap = new Map<string, number>(savedBookingPopup.map((c: any, index: number) => [c.key, index]));
+          this.bookingsPopupList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        // Load Daily Entries preferences
+        const dConf = this.columnConfig.daily_entries || {};
+        this.dailySortColumn = dConf.sort_column || 'entry_date';
+        this.dailySortDirection = dConf.sort_direction || 'desc';
+        this.dailyMandatoryEditCheck = dConf.mandatory_edit_check || false;
+
+        let roomKeys: string[] = [];
         if (this.roomConfig._order && Array.isArray(this.roomConfig._order)) {
-          keys = this.roomConfig._order.filter((key: string) => key in this.roomConfig);
+          roomKeys = this.roomConfig._order.filter((key: string) => key in this.roomConfig);
           Object.keys(this.roomConfig).forEach(key => {
-            if (key !== '_order' && !keys.includes(key)) {
-              keys.push(key);
+            if (key !== '_order' && !roomKeys.includes(key)) {
+              roomKeys.push(key);
             }
           });
         } else {
-          keys = Object.keys(this.roomConfig).filter(k => k !== '_order');
+          roomKeys = Object.keys(this.roomConfig).filter(k => k !== '_order');
         }
 
-        this.roomTypes = keys.map(k => ({
-          key: k,
-          limit: this.roomConfig[k] || 0
+        const defaultDailyCols = [
+          { key: 'entry_date', label: 'Log Date', visible: true, mandatory: true },
+          { key: 'rooms_sold', label: 'Rooms Sold', visible: true, mandatory: true },
+          { key: 'total_rooms_available', label: 'Total Capacity', visible: true, mandatory: true }
+        ];
+        const dynamicRoomTypes = roomKeys.map(rt => ({
+          key: rt,
+          label: rt,
+          visible: true,
+          mandatory: false
         }));
+        const defaultDailyEndCols = [
+          { key: 'total_guests', label: 'Active Guests', visible: true, mandatory: false },
+          { key: 'total_revenue', label: 'Recorded Revenue', visible: true, mandatory: true },
+          { key: 'notes', label: 'Remarks', visible: true, mandatory: false }
+        ];
+        const fullDailyCols = [...defaultDailyCols, ...dynamicRoomTypes, ...defaultDailyEndCols];
+        let savedDailyTable = dConf.table || [];
+        this.dailyTableList = fullDailyCols.map(def => {
+          const saved = savedDailyTable.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedDailyTable.length > 0) {
+          const orderMap = new Map<string, number>(savedDailyTable.map((c: any, index: number) => [c.key, index]));
+          this.dailyTableList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        let savedDailyPopup = dConf.popup || [];
+        this.dailyPopupList = fullDailyCols.map(def => {
+          const saved = savedDailyPopup.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedDailyPopup.length > 0) {
+          const orderMap = new Map<string, number>(savedDailyPopup.map((c: any, index: number) => [c.key, index]));
+          this.dailyPopupList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        // Load Expenses preferences
+        const eConf = this.columnConfig.expenses || {};
+        this.expensesSortColumn = eConf.sort_column || 'month_year';
+        this.expensesSortDirection = eConf.sort_direction || 'desc';
+        this.expensesMandatoryEditCheck = eConf.mandatory_edit_check || false;
+
+        const defaultExpenseCols = [
+          { key: 'month_year', label: 'Month / Year', visible: true, mandatory: true },
+          { key: 'utilities', label: 'Utilities', visible: true, mandatory: false },
+          { key: 'salaries', label: 'Salaries', visible: true, mandatory: false },
+          { key: 'maintenance', label: 'Maintenance', visible: true, mandatory: false },
+          { key: 'consumables', label: 'Consumables', visible: true, mandatory: false },
+          { key: 'marketing', label: 'Marketing', visible: true, mandatory: false },
+          { key: 'other', label: 'Other', visible: true, mandatory: false },
+          { key: 'receipts', label: 'Receipts', visible: true, mandatory: false },
+          { key: 'payment_status', label: 'Status', visible: true, mandatory: true },
+          { key: 'total_amount', label: 'Total Outflow', visible: true, mandatory: true }
+        ];
+        let savedExpenseTable = eConf.table || [];
+        this.expensesTableList = defaultExpenseCols.map(def => {
+          const saved = savedExpenseTable.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedExpenseTable.length > 0) {
+          const orderMap = new Map<string, number>(savedExpenseTable.map((c: any, index: number) => [c.key, index]));
+          this.expensesTableList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        let savedExpensePopup = eConf.popup || [];
+        this.expensesPopupList = defaultExpenseCols.map(def => {
+          const saved = savedExpensePopup.find((s: any) => s.key === def.key);
+          return {
+            ...def,
+            visible: saved ? saved.visible !== false : def.visible,
+            mandatory: saved ? saved.mandatory === true : def.mandatory
+          };
+        });
+        if (savedExpensePopup.length > 0) {
+          const orderMap = new Map<string, number>(savedExpensePopup.map((c: any, index: number) => [c.key, index]));
+          this.expensesPopupList.sort((a, b) => {
+            const indexA = orderMap.has(a.key) ? orderMap.get(a.key)! : 999;
+            const indexB = orderMap.has(b.key) ? orderMap.get(b.key)! : 999;
+            return indexA - indexB;
+          });
+        }
+
+        this.roomTypes = roomKeys.map(k => {
+          const val = this.roomConfig[k];
+          return {
+            key: k,
+            limit: Array.isArray(val) ? val.length : Number(val || 0),
+            roomsListStr: Array.isArray(val) ? val.join(', ') : ''
+          };
+        });
       }
     });
+  }
+
+  onRoomsListChange(room: any): void {
+    const str = room.roomsListStr || '';
+    if (str.trim().length > 0) {
+      const items = str.split(',').map((s: string) => s.trim()).filter(Boolean);
+      room.limit = items.length;
+    }
+  }
+
+  onNewCategoryRoomsListChange(): void {
+    const str = this.newCategoryRoomsListStr || '';
+    if (str.trim().length > 0) {
+      const items = str.split(',').map((s: string) => s.trim()).filter(Boolean);
+      this.newCategoryLimit = items.length;
+    }
   }
 
   addCategory() {
@@ -251,8 +338,13 @@ export class SettingsComponent implements OnInit {
       this.message.warning('Capacity must be greater than 0');
       return;
     }
-    this.roomTypes.push({ key: name, limit: this.newCategoryLimit });
+    this.roomTypes.push({ 
+      key: name, 
+      limit: this.newCategoryLimit, 
+      roomsListStr: this.newCategoryRoomsListStr.trim() 
+    });
     this.newCategoryName = '';
+    this.newCategoryRoomsListStr = '';
     this.newCategoryLimit = 1;
     this.message.success(`Added ${name} temporarily. Click "Save Configuration" to commit changes.`);
   }
@@ -275,7 +367,13 @@ export class SettingsComponent implements OnInit {
       const order: string[] = [];
 
       this.roomTypes.forEach(r => {
-        configObj[r.key] = r.limit;
+        const str = r.roomsListStr || '';
+        if (str.trim().length > 0) {
+          const items = str.split(',').map((s: string) => s.trim()).filter(Boolean);
+          configObj[r.key] = items;
+        } else {
+          configObj[r.key] = r.limit;
+        }
         order.push(r.key);
       });
 
@@ -287,6 +385,56 @@ export class SettingsComponent implements OnInit {
       this.message.success('Room configuration updated successfully!');
     } catch (e: any) {
       this.message.error(e.message || 'Failed to update configuration');
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  async savePreferences() {
+    if (!this.hotelId) {
+      this.message.error('No hotel context found');
+      return;
+    }
+
+    this.isSaving = true;
+    try {
+      const currentConfig = this.columnConfig || {};
+
+      const newConfig = {
+        ...currentConfig,
+        bookings: {
+          ...(currentConfig.bookings || {}),
+          table: this.bookingsTableList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          popup: this.bookingsPopupList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          sort_column: this.bookingsSortColumn,
+          sort_direction: this.bookingsSortDirection,
+          mandatory_edit_check: this.bookingsPopupList.some(c => c.mandatory)
+        },
+        daily_entries: {
+          ...(currentConfig.daily_entries || {}),
+          table: this.dailyTableList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          popup: this.dailyPopupList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          sort_column: this.dailySortColumn,
+          sort_direction: this.dailySortDirection,
+          mandatory_edit_check: this.dailyPopupList.some(c => c.mandatory)
+        },
+        expenses: {
+          ...(currentConfig.expenses || {}),
+          table: this.expensesTableList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          popup: this.expensesPopupList.map(c => ({ key: c.key, visible: c.visible, mandatory: c.mandatory })),
+          sort_column: this.expensesSortColumn,
+          sort_direction: this.expensesSortDirection,
+          mandatory_edit_check: this.expensesPopupList.some(c => c.mandatory)
+        }
+      };
+
+      const { error } = await this.supabaseService.updateHotelColumnConfig(this.hotelId, newConfig);
+      if (error) throw error;
+
+      this.columnConfig = newConfig;
+      this.message.success('Preferences updated successfully!');
+    } catch (e: any) {
+      this.message.error(e.message || 'Failed to update preferences');
     } finally {
       this.isSaving = false;
     }

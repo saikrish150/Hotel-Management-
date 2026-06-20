@@ -8,41 +8,65 @@ export class AnalyticsService {
   constructor(private supabase: SupabaseService) {}
 
   async getAnalyticsData(startDate: Date, endDate: Date) {
-    const client = this.supabase.getClient();
+
     const profile = this.supabase.currentProfile;
     
     if (!profile || !profile.hotel_id) {
       throw new Error('No hotel context found');
     }
 
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const formatLocal = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const startStr = formatLocal(startDate);
+    const endStr = formatLocal(endDate);
 
     // Fetch Daily Entries within date range
-    const { data: dailyEntries, error: dailyError } = await client
-      .from('daily_entries')
-      .select('*')
-      .eq('hotel_id', profile.hotel_id)
-      .gte('entry_date', startStr)
-      .lte('entry_date', endStr)
-      .order('entry_date', { ascending: true });
+    const { data: dailyEntriesRaw, error: dailyError } = await this.supabase.getDailyEntries(profile.hotel_id, startStr, endStr);
+    const dailyEntries = dailyEntriesRaw ? dailyEntriesRaw.sort((a, b) => new Date(a.entry_date).getTime() - new Date(b.entry_date).getTime()) : null;
 
     if (dailyError) throw dailyError;
 
     // Fetch Monthly Expenses (since these are monthly, we fetch for the years involved)
     const startYear = startDate.getFullYear();
+    const startMonth = startDate.getMonth() + 1;
     const endYear = endDate.getFullYear();
+    const endMonth = endDate.getMonth() + 1;
     
-    const { data: monthlyExpenses, error: expensesError } = await client
-      .from('monthly_expenses')
-      .select('*')
-      .eq('hotel_id', profile.hotel_id)
-      .gte('expense_year', startYear)
-      .lte('expense_year', endYear);
+    const { data: allExpenses, error: expensesError } = await this.supabase.getMonthlyExpenses(profile.hotel_id);
+    const monthlyExpenses = allExpenses?.filter(e => {
+      const isAfterStart = e.expense_year > startYear || (e.expense_year === startYear && e.expense_month >= startMonth);
+      const isBeforeEnd = e.expense_year < endYear || (e.expense_year === endYear && e.expense_month <= endMonth);
+      return isAfterStart && isBeforeEnd;
+    }) || null;
 
     if (expensesError) throw expensesError;
 
-    return this.processData(dailyEntries || [], monthlyExpenses || [], startDate, endDate);
+    let roomBookings: any[] = [];
+    try {
+      const { data: allBookings, error: bError } = await this.supabase.getRoomBookings(profile.hotel_id);
+      const bData = allBookings?.filter((b: any) => {
+        const checkIn = new Date(b.check_in).toISOString().split('T')[0];
+        return checkIn >= startStr && checkIn <= endStr;
+      }) || null;
+      if (!bError && bData) {
+        roomBookings = bData;
+      }
+    } catch (e) {
+      console.warn('Failed to query room_bookings, using empty array fallback', e);
+    }
+
+    const processed = this.processData(dailyEntries || [], monthlyExpenses || [], startDate, endDate);
+    return {
+      ...processed,
+      rawEntries: dailyEntries || [],
+      rawExpenses: monthlyExpenses || [],
+      rawBookings: roomBookings
+    };
   }
 
   private processData(dailyEntries: any[], monthlyExpenses: any[], startDate: Date, endDate: Date) {

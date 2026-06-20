@@ -1,0 +1,77 @@
+    /* Status Radio Button Custom Styling */
+    ::ng-deep .premium-status-radio .ant-radio-checked .ant-radio-inner { border-color: var(--theme-primary) !important; }
+    ::ng-deep .premium-status-radio .ant-radio-inner::after { background-color: var(--theme-primary) !important; }
+    ::ng-deep .premium-status-radio .ant-radio-wrapper:hover .ant-radio-inner { border-color: var(--theme-primary-dark) !important; }
+    
+    ::ng-deep .premium-status-radio .ant-radio-wrapper { color: var(--theme-text-main) !important; font-weight: 500; }
+    ::ng-deep .premium-status-radio .ant-radio-inner { background-color: transparent !important; border-color: var(--theme-border) !important; }
+
+    ::ng-deep .custom-dark-select.status-confirmed .ant-select-selector {
+      color: var(--theme-primary) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
+      background-color: rgba(212, 175, 55, 0.05) !important;
+    }
+    ::ng-deep .custom-dark-select.status-checked-in .ant-select-selector {
+      color: #34d399 !important;
+      border-color: rgba(52, 211, 153, 0.3) !important;
+      background-color: rgba(52, 211, 153, 0.05) !important;
+    }
+    ::ng-deep .custom-dark-select.status-checked-out .ant-select-selector {
+      color: #a1a1aa !important;
+      border-color: rgba(161, 161, 170, 0.3) !important;
+      background-color: rgba(161, 161, 170, 0.05) !important;
+    }
+    ::ng-deep .ant-popover-inner {
+      background-color: var(--theme-card) !important;
+      border: 1px solid var(--theme-border) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 10px 25px -5px var(--theme-shadow-heavy) !important;
+    }
+    ::ng-deep .ant-popover-inner-content {
+      padding: 0 !important;
+      color: var(--theme-text-main) !important;
+    }
+    ::ng-deep .ant-popover-arrow-content {
+      background-color: var(--theme-card) !important;
+      border-color: var(--theme-border) !important;
+    }
+
+    /* Compact Booking Form Overrides */
+    ::ng-deep .compact-booking-form .ant-form-item-label {
+      padding: 0 0 1px 0 !important;
+    }
+    ::ng-deep .compact-booking-form .ant-form-item-label > label {
+      font-size: 10px !important;
+      height: auto !important;
+    }
+    ::ng-deep .compact-booking-form .ant-form-item {
+      margin-bottom: 0 !important;
+    }
+    ::ng-deep .compact-booking-form .ant-form-item-control {
+      min-height: unset !important;
+    }
+    ::ng-deep .compact-booking-form .ant-select-selector {
+      height: 32px !important;
+      border-radius: 8px !important;
+    }
+    ::ng-deep .compact-booking-form .ant-picker {
+      border-radius: 8px !important;
+    }
+    ::ng-deep .compact-booking-form .ant-input-number {
+      border-radius: 8px !important;
+    }
+    ::ng-deep .compact-booking-form .compact-upload .ant-upload-drag {
+      padding: 4px 8px !important;
+      border-radius: 8px !important;
+      min-height: unset !important;
+    }
+    ::ng-deep .compact-booking-form .premium-status-radio .ant-radio-wrapper {
+      font-size: 11px !important;
+      margin-right: 0 !important;
+    }
+    ::ng-deep .compact-booking-form .ant-form-item-control-input {
+      min-height: unset !important;
+    }
+    ::ng-deep .compact-booking-form .ant-picker-input > input {
+      text-align: center !important;
+    }

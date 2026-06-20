@@ -1,0 +1,844 @@
+@Component({
+  selector: 'app-bookings',
+  standalone: true,
+  imports: [
+    CommonModule,
+    NzTableModule,
+    NzButtonModule,
+    NzIconModule,
+    NzPopconfirmModule,
+    NzModalModule,
+    ReactiveFormsModule,
+    FormsModule,
+    NzFormModule,
+    NzInputModule,
+    NzInputNumberModule,
+    NzDatePickerModule,
+    NzSelectModule,
+    NzRadioModule,
+    NzPopoverModule,
+    NzToolTipModule,
+    NzUploadModule,
+    NgApexchartsModule,
+    NzAutocompleteModule
+  ],
+  template: `
+    <div class="space-y-8 pb-10">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-[var(--theme-border)] pb-6">
+        <div>
+          <h2 class="text-4xl font-normal text-[var(--theme-text-main)]">Room Bookings</h2>
+          <p class="text-sm text-[var(--theme-text-muted)] mt-2">Check-in details, room statuses & guest records</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button class="bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all flex items-center gap-2 cursor-pointer" 
+                  (click)="exportToExcel()">
+            <span nz-icon nzType="file-excel" nzTheme="outline" class="text-emerald-400 text-sm"></span> Export Excel
+          </button>
+          <button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-6 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all flex items-center gap-2 cursor-pointer" 
+                  (click)="openBookingAddModal()">
+            <span nz-icon nzType="plus"></span> New Booking
+          </button>
+        </div>
+      </div>
+
+      <!-- Database Connection Status Banner -->
+      <div *ngIf="!isDatabaseLinked" class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+            <span nz-icon nzType="warning" nzTheme="outline"></span> Database Table Link Pending
+          </div>
+          <p class="text-xs text-[var(--theme-text-muted)] mt-1 max-w-2xl">
+            Bookings are currently saved in your local browser storage. To synchronize bookings across all devices, create the <code class="text-amber-300 bg-amber-500/5 px-1.5 py-0.5 rounded font-mono">room_bookings</code> table in your Supabase SQL Editor.
+          </p>
+        </div>
+        <button nz-button nzSize="small" class="bg-amber-500 hover:bg-amber-400 text-black border-none rounded-lg text-[10px] font-bold uppercase tracking-wider py-1.5 px-4" (click)="showSqlModal()">
+          Setup SQL Table
+        </button>
+      </div>
+
+
+
+      <!-- Operational Overview Dashboard Section -->
+      <div class="glass-card mb-6 p-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b border-[var(--theme-border)] pb-4 mb-6 gap-4">
+          <div>
+            <h3 class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">Operational Overview</h3>
+            <p class="text-xs text-[var(--theme-text-muted)] mt-1">Real-time room occupancy, check-in pacing & stay durations.</p>
+          </div>
+          <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">{{ availableRooms }} Rooms Available</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+          
+          <!-- Left Column: Compact Data Cards -->
+          <div class="flex flex-col gap-3">
+            
+            <div class="grid grid-cols-2 gap-3">
+              <!-- 1. Active Check-ins -->
+              <div class="bg-[var(--theme-card-bg)] rounded-xl p-3 border border-[var(--theme-border)]">
+                <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest">Active Check-ins</span>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <h3 class="text-2xl font-bold text-[var(--theme-text-main)]">{{ activeCheckedInCount }}</h3>
+                  <span class="text-[8px] text-blue-400 font-semibold uppercase tracking-wider">In House</span>
+                </div>
+              </div>
+
+              <!-- 2. Checked Out -->
+              <div class="bg-[var(--theme-card-bg)] rounded-xl p-3 border border-[var(--theme-border)]">
+                <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest">Checked Out</span>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <h3 class="text-2xl font-bold text-[var(--theme-text-main)]">{{ activeCheckedOutCount }}</h3>
+                  <span class="text-[8px] text-rose-400 font-semibold uppercase tracking-wider">Completed</span>
+                </div>
+              </div>
+
+              <!-- 3. Total Guests -->
+              <div class="bg-[var(--theme-card-bg)] rounded-xl p-3 border border-[var(--theme-border)]">
+                <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest">Total Guests</span>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <h3 class="text-2xl font-bold text-[var(--theme-text-main)]">{{ totalGuestsRegistered }}</h3>
+                  <span class="text-[8px] text-emerald-400 font-semibold uppercase tracking-wider">Registered</span>
+                </div>
+              </div>
+
+              <!-- 4. Expected Bookings -->
+              <div class="bg-[var(--theme-card-bg)] rounded-xl p-3 border border-[var(--theme-border)]">
+                <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest">Expected Bookings</span>
+                <div class="mt-1 flex items-baseline gap-1.5">
+                  <h3 class="text-2xl font-bold text-amber-500">{{ expectedBookings }}</h3>
+                  <span class="text-[8px] text-amber-400 font-semibold uppercase tracking-wider">Rooms</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Status Distribution -->
+            <div class="bg-[var(--theme-card-bg)] rounded-xl p-3 border border-[var(--theme-border)]">
+              <div class="text-center mb-1">
+                <span class="text-[9px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest">Status Distribution</span>
+              </div>
+              <div class="-mx-3 -my-2 flex justify-center scale-90 origin-top">
+                <apx-chart *ngIf="statusChartOptions"
+                  [series]="statusChartOptions.series!"
+                  [chart]="statusChartOptions.chart!"
+                  [labels]="statusChartOptions.labels!"
+                  [colors]="statusChartOptions.colors!"
+                  [dataLabels]="statusChartOptions.dataLabels!"
+                  [tooltip]="statusChartOptions.tooltip!"
+                  [stroke]="statusChartOptions.stroke!"
+                  [legend]="statusChartOptions.legend!"
+                  [plotOptions]="statusChartOptions.plotOptions!">
+                </apx-chart>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Live Room Status -->
+          <div class="h-full overflow-hidden border-l border-[var(--theme-border)] pl-6">
+            <ng-container *ngIf="getCategories().length > 0">
+              <div class="animate-entrance-2 h-full flex flex-col">
+                <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                  <div>
+                    <h3 class="text-xs font-semibold text-[var(--theme-text-main)] uppercase tracking-widest">Live Room Status</h3>
+                  </div>
+                  <div class="flex gap-4 items-center text-[9px] uppercase tracking-widest font-bold">
+                    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div> <span class="text-emerald-400">Available</span></div>
+                    <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]"></div> <span class="text-rose-400">Occupied</span></div>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-5 overflow-y-auto pb-4 pr-2 custom-scrollbar h-full">
+                  <!-- Row per category -->
+                  <div *ngFor="let category of getCategories()" class="flex flex-col w-full">
+                    <h4 class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-widest mb-3 pb-1 border-b border-[var(--theme-border)]">{{ category }}</h4>
+                    
+                    <div class="flex flex-wrap gap-2.5">
+                      <div *ngFor="let room of getRoomsByCategory(category)" 
+                           (click)="onRoomCardClick(room, category)"
+                           class="relative flex justify-center items-center py-2 px-4 min-w-[55px] rounded-lg border cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md group"
+                           [ngClass]="isRoomOccupied(room) 
+                             ? 'bg-rose-500/10 border-rose-500/30 hover:bg-rose-500/20 hover:shadow-[0_0_10px_rgba(244,63,94,0.3)]' 
+                             : 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 hover:shadow-[0_0_10px_rgba(16,185,129,0.3)]'">
+                        
+                        <span class="text-sm font-bold transition-all" [ngClass]="isRoomOccupied(room) ? 'text-rose-400 group-hover:text-rose-300' : 'text-emerald-400 group-hover:text-emerald-300'">{{ room }}</span>
+                        
+                        <div *ngIf="!isRoomOccupied(room)" class="absolute inset-0 bg-[var(--theme-primary)]/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+                          <span class="text-[9px] font-bold text-emerald-300 uppercase tracking-wider shadow-sm">Book</span>
+                        </div>
+                        <div *ngIf="isRoomOccupied(room)" class="absolute inset-0 bg-rose-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center backdrop-blur-[1px]">
+                          <span class="text-[9px] font-bold text-rose-300 uppercase tracking-wider shadow-sm">View</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+            
+            <div *ngIf="getCategories().length === 0" class="h-full flex items-center justify-center border border-dashed border-[var(--theme-border)] rounded-xl opacity-50 p-6 min-h-[300px]">
+              <div class="text-center">
+                <span nz-icon nzType="appstore" nzTheme="outline" class="text-3xl text-[var(--theme-text-muted)] mb-3"></span>
+                <p class="text-[11px] uppercase tracking-widest font-bold text-[var(--theme-text-muted)]">No Room Configured</p>
+                <p class="text-[10px] text-[var(--theme-text-muted)] mt-1">Configure room numbers in settings.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card p-6">
+        <div class="flex flex-col gap-3 mb-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-[var(--theme-text-main)] uppercase tracking-wider">{{ hotelName }}</span>
+            </div>
+            <button *ngIf="hasActiveFilters()" nz-button nzType="text" class="text-[var(--theme-text-muted)] hover:text-white text-xs flex items-center gap-1" (click)="resetBookingFilters()">
+              <span nz-icon nzType="close"></span> Clear All Filters
+            </button>
+          </div>
+          
+          <!-- Advanced Filtering Toolbar -->
+          <div class="flex flex-col gap-4 border-b border-[var(--theme-border)] pb-4 mb-4 mt-2">
+            <!-- Top row: Quick Filters and Preset Ranges (A tags) -->
+            <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+              
+              <!-- Quick Filter Segmented Buttons -->
+              <div class="flex bg-[var(--theme-bg)] p-1 rounded-xl border border-[var(--theme-border)] shadow-inner overflow-x-auto max-w-full hide-scrollbar">
+                <button type="button" [ngClass]="activeQuickFilter === 'all' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('all')">All</button>
+                <button type="button" [ngClass]="activeQuickFilter === 'check-in' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('check-in')">Check In</button>
+                <button type="button" [ngClass]="activeQuickFilter === 'check-out' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('check-out')">Check Out</button>
+                <button type="button" [ngClass]="activeQuickFilter === 'confirmed' ? 'bg-[var(--theme-primary)] shadow-[0_0_10px_var(--theme-glow)] font-bold text-black' : 'text-[var(--theme-text-muted)] hover:text-white font-medium bg-transparent'" class="rounded-lg text-[10px] uppercase tracking-wider px-4 h-8 transition-all border-none outline-none cursor-pointer flex items-center justify-center whitespace-nowrap" (click)="setQuickFilter('confirmed')">Confirmed</button>
+              </div>
+
+              <!-- Preset Ranges as Pill Buttons -->
+              <div class="flex flex-wrap items-center gap-2 text-xs font-medium">
+                <span class="text-[var(--theme-text-muted)] text-[10px] uppercase tracking-wider font-bold mr-2">Timeframe:</span>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Today' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Today')">Today</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Yesterday' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Yesterday')">Yesterday</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Past 7 Days' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Past 7 Days')">Past 7 Days</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Past 30 Days' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Past 30 Days')">Past 30 Days</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Current Month' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Current Month')">Current Month</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Previous Month' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Previous Month')">Previous Month</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'Last 6 Months' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="applyPresetRange('Last 6 Months')">Last 6 Months</button>
+                <button type="button" class="rounded-full text-[10px] uppercase tracking-wider px-3 h-7 transition-all border outline-none cursor-pointer" [ngClass]="activePresetRange === 'custom' ? 'bg-[var(--theme-primary)]/10 border-[var(--theme-primary)] text-[var(--theme-primary)]' : 'border-[var(--theme-border)] text-[var(--theme-text-muted)] hover:text-white'" (click)="activePresetRange = 'custom'">Custom...</button>
+              </div>
+            </div>
+
+            <!-- Custom Date Range Picker (Only visible if 'custom' is selected or active) -->
+            <div class="flex items-center gap-4" *ngIf="activePresetRange === 'custom' || globalDateRange.length > 0 && activePresetRange === null">
+              <nz-range-picker [(ngModel)]="globalDateRange" (ngModelChange)="onGlobalFilterChange()" [nzAllowClear]="true" nzFormat="yyyy-MM-dd" class="w-full sm:w-64 h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]"></nz-range-picker>
+            </div>
+          </div>
+          <!-- Hidden Columns restore area -->
+          <div *ngIf="getHiddenColumns().length > 0" class="flex flex-wrap items-center gap-2 bg-zinc-900/30 border border-zinc-800/50 rounded-xl p-2.5">
+            <span class="text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider mr-1">Hidden Columns:</span>
+            <button *ngFor="let col of getHiddenColumns()" 
+                    (click)="toggleColumnVisibility(col.key, true)" 
+                    class="bg-zinc-800 hover:bg-zinc-700 text-gray-300 hover:text-white text-[10px] px-2.5 py-1 rounded-lg border border-zinc-700 transition-all flex items-center gap-1.5 cursor-pointer">
+              <span nz-icon nzType="plus" class="text-[8px]"></span>
+              <span>{{ col.label }}</span>
+            </button>
+          </div>
+        </div>
+
+        <nz-table #bookingTable 
+                  [nzData]="filteredBookings" 
+                  [nzFrontPagination]="true" 
+                  [nzPageSize]="10" 
+                  nzSize="middle" 
+                  [nzBordered]="false"
+                  [nzScroll]="{ x: '1600px' }">
+          <thead>
+            <tr class="text-left border-b border-[var(--theme-border)]">
+              <ng-container *ngFor="let col of columns; let i = index">
+                <th *ngIf="col.visible" 
+                    class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none group relative" 
+                    [nzWidth]="col.width || null" 
+                    [class.text-center]="col.align === 'center'" 
+                    [class.text-right]="col.align === 'right'">
+                  
+                  <div class="flex items-center gap-1.5" [class.justify-center]="col.align === 'center'" [class.justify-end]="col.align === 'right'">
+                    <!-- Reordering & Hide Controls on Hover -->
+                    <div class="hidden group-hover:flex items-center gap-0.5 mr-1 text-[10px] text-[var(--theme-text-muted)] bg-black/80 backdrop-blur rounded-lg px-1.5 py-1 border border-zinc-700 absolute -top-8 left-1/2 -translate-x-1/2 z-10 shadow-lg">
+                      <button nz-button nzType="text" class="text-gray-400 hover:text-white p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0" 
+                              [disabled]="i === 0" (click)="moveColumn(i, 'left'); $event.stopPropagation()">
+                        <span nz-icon nzType="left" class="text-[9px]"></span>
+                      </button>
+                      <button nz-button nzType="text" class="text-gray-400 hover:text-white p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-0.5" 
+                              [disabled]="i === columns.length - 1" (click)="moveColumn(i, 'right'); $event.stopPropagation()">
+                        <span nz-icon nzType="right" class="text-[9px]"></span>
+                      </button>
+                      <button nz-button nzType="text" class="text-rose-400 hover:text-rose-300 p-0 h-4 w-4 leading-none flex items-center justify-center min-w-0 ml-1 border-l border-zinc-700 pl-1" 
+                              (click)="toggleColumnVisibility(col.key, false); $event.stopPropagation()">
+                        <span nz-icon nzType="close" class="text-[9px]"></span>
+                      </button>
+                    </div>
+
+                    <span>{{ col.label }}</span>
+
+                    <!-- Conditional Column Header popover filters -->
+                    <ng-container [ngSwitch]="col.key">
+                      <span *ngSwitchCase="'check_in'" nz-icon nzType="filter" nzTheme="outline" 
+                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
+                            [class.text-white]="colFilterDate"
+                            nz-popover [nzPopoverContent]="checkInFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
+                      <span *ngSwitchCase="'room_number'" nz-icon nzType="filter" nzTheme="outline" 
+                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
+                            [class.text-white]="colFilterRoomNo"
+                            nz-popover [nzPopoverContent]="roomNoFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
+                      <span *ngSwitchCase="'room_category'" nz-icon nzType="filter" nzTheme="outline" 
+                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
+                            [class.text-white]="colFilterCategory"
+                            nz-popover [nzPopoverContent]="categoryFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
+                      <span *ngSwitchCase="'guest_name'" nz-icon nzType="filter" nzTheme="outline" 
+                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
+                            [class.text-white]="colFilterName"
+                            nz-popover [nzPopoverContent]="nameFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
+                      <span *ngSwitchCase="'status'" nz-icon nzType="filter" nzTheme="outline" 
+                            class="cursor-pointer text-[var(--theme-primary)] hover:text-white transition-colors"
+                            [class.text-white]="colFilterStatus"
+                            nz-popover [nzPopoverContent]="statusFilterTpl" nzPopoverTrigger="click" nzPopoverPlacement="bottomLeft"></span>
+                    </ng-container>
+                  </div>
+                </th>
+              </ng-container>
+              <th class="pb-3 text-[10px] font-bold text-[var(--theme-text-muted)] uppercase tracking-wider bg-transparent border-none text-right" nzWidth="100px">ACTIONS</th>
+            </tr>
+          </thead>
+          <tbody class="text-sm">
+            <tr *ngFor="let data of bookingTable.data" class="border-b border-[var(--theme-border)] transition-all hover:bg-[var(--theme-card)]/40 hover:shadow-lg group">
+              <ng-container *ngFor="let col of columns">
+                <td *ngIf="col.visible" 
+                    class="py-4 text-xs bg-transparent border-none" 
+                    [class.text-center]="col.align === 'center'" 
+                    [class.text-right]="col.align === 'right'"
+                    [class.font-semibold]="col.key === 'guest_name' || col.key === 'amount_paid'"
+                    [class.text-[var(--theme-text-main)]]="col.key === 'check_in' || col.key === 'room_number' || col.key === 'guest_name' || col.key === 'number_of_people' || col.key === 'number_of_days' || col.key === 'check_out'"
+                    [class.text-[var(--theme-text-muted)]]="col.key === 'room_category' || col.key === 'address' || col.key === 'id_number' || col.key === 'phone_number'"
+                    [class.uppercase]="col.key === 'room_category'"
+                    [class.tracking-wider]="col.key === 'room_category'"
+                    [class.max-w-[180px]]="col.key === 'address'"
+                    [class.truncate]="col.key === 'address'"
+                    [title]="col.key === 'address' ? data.address : ''">
+                  
+                  <ng-container [ngSwitch]="col.key">
+                    <span *ngSwitchCase="'check_in'">{{ data.check_in | date:'dd MMM yyyy HH:mm' }}</span>
+                    <span *ngSwitchCase="'room_number'">{{ data.room_number }}</span>
+                    <span *ngSwitchCase="'room_category'">{{ data.room_category || '-' }}</span>
+                    <span *ngSwitchCase="'booking_source'">{{ data.booking_source || '-' }}</span>
+                    <span *ngSwitchCase="'guest_name'">{{ data.guest_name }}</span>
+                    <span *ngSwitchCase="'address'">{{ data.address || '-' }}</span>
+                    <span *ngSwitchCase="'id_number'">{{ data.id_number || '-' }}</span>
+                    <span *ngSwitchCase="'phone_number'">{{ data.phone_number || '-' }}</span>
+                    <span *ngSwitchCase="'number_of_people'">{{ data.number_of_people || 1 }}</span>
+                    <span *ngSwitchCase="'number_of_days'">{{ data.number_of_days || 1 }}</span>
+                    <span *ngSwitchCase="'amount_paid'" class="text-emerald-400">₹{{ (data.amount_paid || 0) | number }}</span>
+                    <span *ngSwitchCase="'check_out'">{{ (data.status === 'Checked Out' || data.status === 'checked out') && data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : (data.check_out | date:'dd MMM yyyy HH:mm') }}</span>
+                    <span *ngSwitchCase="'actual_checkout'">{{ data.actual_checkout ? (data.actual_checkout | date:'dd MMM yyyy HH:mm') : '-' }}</span>
+                    
+                    <ng-container *ngSwitchCase="'id_documents'">
+                      <button *ngIf="data.id_documents?.length" nz-button nzType="text" class="text-[var(--theme-primary)] hover:!text-amber-300 hover:!bg-transparent focus:!text-amber-300 focus:!bg-transparent active:!bg-transparent text-xs font-semibold px-2 flex items-center justify-center m-auto transition-colors" (click)="viewAttachments(data.id_documents)">
+                        View ({{data.id_documents.length}})
+                      </button>
+                      <span *ngIf="!data.id_documents?.length" class="text-[var(--theme-text-muted)]">-</span>
+                    </ng-container>
+
+                    <ng-container *ngSwitchCase="'status'">
+                      <nz-select [ngModel]="data.status === 'checked out' ? 'Checked Out' : (data.status === 'checked in' ? 'Checked In' : (data.status === 'confirmed' ? 'Confirmed' : data.status))" 
+                                 (ngModelChange)="updateBookingStatusDirectly(data, $event)" 
+                                 class="w-[130px] custom-dark-select"
+                                 [class.status-confirmed]="data.status === 'Confirmed' || data.status === 'confirmed'"
+                                 [class.status-checked-in]="data.status === 'Checked In' || data.status === 'checked in'"
+                                 [class.status-checked-out]="data.status === 'Checked Out' || data.status === 'checked out'">
+                        <nz-option nzValue="Confirmed" nzLabel="Confirmed"></nz-option>
+                        <nz-option nzValue="Checked In" nzLabel="Check In"></nz-option>
+                        <nz-option nzValue="Checked Out" nzLabel="Check Out"></nz-option>
+                      </nz-select>
+                    </ng-container>
+                  </ng-container>
+
+                </td>
+              </ng-container>
+              <td class="py-4 bg-transparent border-none text-right">
+                <div class="flex items-center justify-end gap-3">
+                  <button *ngIf="data.status === 'Checked In'" 
+                          nz-button nzType="text" 
+                          class="text-rose-500 hover:text-rose-400 transition-colors p-0" 
+                          nz-tooltip nzTooltipTitle="Extend Stay" 
+                          (click)="extendStay(data)">
+                    <span nz-icon nzType="calendar" class="text-base"></span>
+                  </button>
+                  <button nz-button nzType="text" class="text-amber-500 hover:text-amber-400 transition-colors p-0" (click)="openBookingEditModal(data)">
+                    <span nz-icon nzType="edit" class="text-base"></span>
+                  </button>
+                  <button nz-button nzType="text" class="text-rose-500 hover:text-rose-400 transition-colors p-0" nz-popconfirm nzPopconfirmTitle="Are you sure to delete this booking?" (nzOnConfirm)="deleteBooking(data.id)">
+                    <span nz-icon nzType="delete" class="text-base"></span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr *ngIf="filteredBookings.length === 0">
+              <td [attr.colspan]="getVisibleColumnsCount() + 1" class="text-center py-8 text-[var(--theme-text-muted)] bg-transparent border-none">
+                No bookings matches the active filters.
+              </td>
+            </tr>
+          </tbody>
+        </nz-table>
+      </div>
+
+      <!-- Popover Content Templates -->
+      <ng-template #checkInFilterTpl>
+        <div class="p-4 w-72">
+          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
+            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Check-in Date</span>
+          </div>
+          <div class="mb-4">
+            <nz-date-picker [(ngModel)]="colFilterDate" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)] border-[var(--theme-border)]" nzFormat="yyyy-MM-dd"></nz-date-picker>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterDate = null">Reset</button>
+            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #roomNoFilterTpl>
+        <div class="p-4 w-72">
+          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
+            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Room No</span>
+          </div>
+          <div class="mb-4">
+            <input nz-input [(ngModel)]="colFilterRoomNo" placeholder="Enter room number..." class="w-full h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterRoomNo = ''">Reset</button>
+            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #categoryFilterTpl>
+        <div class="p-4 w-72">
+          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
+            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Category</span>
+          </div>
+          <div class="mb-4">
+            <nz-select [(ngModel)]="colFilterCategory" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Category">
+              <nz-option nzValue="" nzLabel="All Categories"></nz-option>
+              <nz-option *ngFor="let type of roomTypes" [nzValue]="type" [nzLabel]="type"></nz-option>
+            </nz-select>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterCategory = ''">Reset</button>
+            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #nameFilterTpl>
+        <div class="p-4 w-72">
+          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
+            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Guest Name</span>
+          </div>
+          <div class="mb-4">
+            <input nz-input [(ngModel)]="colFilterName" placeholder="Enter guest name..." class="w-full h-10 rounded-xl bg-transparent border-[var(--theme-border)] text-[var(--theme-text-main)]" />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterName = ''">Reset</button>
+            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
+          </div>
+        </div>
+      </ng-template>
+
+      <ng-template #statusFilterTpl>
+        <div class="p-4 w-72">
+          <div class="flex items-center justify-between border-b border-[var(--theme-border)] pb-2 mb-3">
+            <span class="text-xs font-bold text-[var(--theme-primary)] uppercase tracking-wider">Filter Status</span>
+          </div>
+          <div class="mb-4">
+            <nz-select [(ngModel)]="colFilterStatus" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Status">
+              <nz-option nzValue="" nzLabel="All Statuses"></nz-option>
+              <nz-option nzValue="Confirmed" nzLabel="Confirmed"></nz-option>
+              <nz-option nzValue="Checked In" nzLabel="Check In"></nz-option>
+              <nz-option nzValue="Checked Out" nzLabel="Check Out"></nz-option>
+            </nz-select>
+          </div>
+          <div class="flex justify-end gap-2">
+            <button nz-button nzType="text" nzSize="small" class="text-[var(--theme-text-muted)] text-xs hover:text-[var(--theme-text-main)]" (click)="colFilterStatus = ''">Reset</button>
+            <button nz-button nzSize="small" class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none font-bold text-xs rounded-lg px-4 h-8 transition-all">APPLY FILTER</button>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Add/Edit Booking Modal -->
+    <nz-modal [(nzVisible)]="isBookingModalVisible" 
+              [nzTitle]="bookingModalTitle" 
+              (nzOnCancel)="handleBookingCancel()" 
+              [nzFooter]="bookingModalFooter"
+              [nzWidth]="750">
+      
+      <ng-template #bookingModalTitle>
+        <div class="flex items-center gap-3">
+          <span nz-icon [nzType]="editingBookingId ? 'edit' : 'plus-circle'" class="text-lg" [style.color]="'var(--theme-primary)'"></span>
+          <span class="text-[var(--theme-text-main)] font-semibold uppercase tracking-wider text-xs" style="font-family: 'Hanken Grotesk', sans-serif;">
+            {{ editingBookingId ? 'Edit Booking Entry' : 'New Room Booking' }}
+          </span>
+        </div>
+      </ng-template>
+
+      <ng-template #bookingModalFooter>
+        <div class="flex justify-end gap-3 px-4 py-3">
+          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleBookingCancel()">
+            Cancel
+          </button>
+          <button nz-button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="handleBookingOk()">
+            {{ editingBookingId ? 'Save Entry' : 'Book Room' }}
+          </button>
+        </div>
+      </ng-template>
+
+      <ng-container *nzModalContent>
+        <form nz-form nzLayout="vertical" [formGroup]="bookingForm" class="p-2">
+          <div nz-row [nzGutter]="[16, 12]" class="mt-2">
+            <ng-container *ngFor="let field of popupFields">
+              <div *ngIf="field.visible" nz-col nzXs="24" nzSm="12" [nzMd]="field.key === 'status' || field.key === 'notes' || field.key === 'guest_name' ? 24 : 8">
+                <ng-container [ngSwitch]="field.key">
+                  <!-- Check In -->
+                  <nz-form-item *ngSwitchCase="'check_in'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('check_in')" class="text-[var(--theme-text-main)]/80 font-medium">Check-In Date/Time</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select check-in date/time">
+                      <nz-date-picker formControlName="check_in" [nzShowTime]="{ nzUse12Hours: true, nzFormat: 'hh:mm a' }" nzFormat="yyyy-MM-dd hh:mm a" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Room Number -->
+                  <nz-form-item *ngSwitchCase="'room_number'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('room_number')" class="text-[var(--theme-text-main)]/80 font-medium">Room Number</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select or enter room number">
+                      <nz-select *ngIf="getRoomsByCategory(bookingForm.get('room_category')?.value).length > 0; else manualRoomInput"
+                                 formControlName="room_number"
+                                 class="w-full h-10 custom-dark-select"
+                                 nzPlaceHolder="Select Room Number">
+                        <nz-option *ngFor="let room of getRoomsByCategory(bookingForm.get('room_category')?.value)"
+                                   [nzValue]="room"
+                                   [nzLabel]="room + (isRoomOccupied(room) ? ' (Occupied)' : ' (Available)')"
+                                   [nzDisabled]="isRoomOccupied(room) && bookingForm.get('room_number')?.value !== room">
+                        </nz-option>
+                      </nz-select>
+
+                      <ng-template #manualRoomInput>
+                        <input nz-input formControlName="room_number" placeholder="e.g. 104" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+                      </ng-template>
+                    </nz-form-control>
+                  </nz-form-item>                  <!-- Room Category -->
+                  <nz-form-item *ngSwitchCase="'room_category'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('room_category')" class="text-[var(--theme-text-main)]/80 font-medium">Room Category</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select room category">
+                      <nz-select formControlName="room_category" class="w-full h-10 custom-dark-select">
+                        <nz-option nzValue="" nzLabel="-- Select Category --"></nz-option>
+                        <nz-option *ngFor="let type of roomTypes" [nzValue]="type" [nzLabel]="type"></nz-option>
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Booking Source -->
+                  <nz-form-item *ngSwitchCase="'booking_source'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('booking_source')" class="text-[var(--theme-text-main)]/80 font-medium">Booking Source</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select booking source">
+                      <nz-select formControlName="booking_source" class="w-full h-10 custom-dark-select" nzPlaceHolder="Select Booking Source">
+                        <nz-option nzValue="" nzLabel="-- Select Booking Source --"></nz-option>
+                        <nz-option nzValue="Normal Customer" nzLabel="Normal Customer"></nz-option>
+                        <nz-option nzValue="Online Booking" nzLabel="Online Booking"></nz-option>
+                        <nz-option nzValue="Event Customer" nzLabel="Event Customer"></nz-option>
+                        <nz-option nzValue="Referred Customer" nzLabel="Referred Customer"></nz-option>
+                      </nz-select>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Guest Profile Selection -->
+                  <nz-form-item *ngSwitchCase="'guest_name'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('guest_name')" class="text-[var(--theme-text-main)]/80 font-medium">Guest Profiles</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select at least one guest">
+                      <div *ngIf="selectedGuests.length > 0; else noGuest" class="flex flex-wrap gap-2">
+                        <div *ngFor="let g of selectedGuests; let i = index" class="px-3 py-1.5 rounded-full border border-[var(--theme-border)] bg-[var(--theme-card-bg)] flex items-center gap-2 shadow-sm">
+                           <div class="w-5 h-5 rounded-full bg-[var(--theme-primary)]/10 flex items-center justify-center text-[var(--theme-primary)] shrink-0">
+                             <span nz-icon nzType="user" class="text-[10px]"></span>
+                           </div>
+                           <span class="font-bold text-xs text-[var(--theme-text-main)]">{{ g.name }}</span>
+                           <span *ngIf="g.phone_number" class="text-[10px] text-[var(--theme-text-muted)] border-l border-[var(--theme-border)] pl-2">{{ g.phone_number }}</span>
+                           <span nz-icon nzType="close-circle" class="text-[var(--theme-text-muted)] hover:text-rose-500 cursor-pointer ml-1 text-xs" (click)="removeGuest(i, $event)"></span>
+                        </div>
+                        
+                        <button nz-button type="button" class="h-8 border border-dashed border-[var(--theme-border)] bg-[var(--theme-card-bg)]/50 text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] hover:border-[var(--theme-primary)] rounded-full px-3 flex items-center justify-center text-xs transition-colors" (click)="openGuestModal($event)">
+                           <span nz-icon nzType="plus" class="mr-1"></span> Add Another
+                        </button>
+                      </div>
+                      <ng-template #noGuest>
+                        <button nz-button type="button" class="w-full h-10 border border-dashed border-[var(--theme-border)] bg-[var(--theme-card-bg)] text-[var(--theme-text-muted)] hover:text-[var(--theme-primary)] hover:border-[var(--theme-primary)] rounded-xl flex items-center justify-center" (click)="openGuestModal($event)">
+                           <span nz-icon nzType="user-add" class="mr-2"></span> Select / Add Guest Profile
+                        </button>
+                      </ng-template>
+                    </nz-form-control>
+                  </nz-form-item>
+
+
+
+                  <!-- Number of People -->
+                  <nz-form-item *ngSwitchCase="'number_of_people'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('number_of_people')" class="text-[var(--theme-text-main)]/80 font-medium">Number of People</nz-form-label>
+                    <nz-form-control nzErrorTip="Please enter number of guests">
+                      <nz-input-number formControlName="number_of_people" [nzMin]="1" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="1"></nz-input-number>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Number of Days -->
+                  <nz-form-item *ngSwitchCase="'number_of_days'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('number_of_days')" class="text-[var(--theme-text-main)]/80 font-medium">Number of Days</nz-form-label>
+                    <nz-form-control nzErrorTip="Please enter number of days">
+                      <nz-input-number formControlName="number_of_days" [nzMin]="1" [nzStep]="1" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="1"></nz-input-number>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Amount Paid -->
+                  <nz-form-item *ngSwitchCase="'amount_paid'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('amount_paid')" class="text-[var(--theme-text-main)]/80 font-medium">Amount Paid</nz-form-label>
+                    <nz-form-control nzErrorTip="Please enter amount paid">
+                      <nz-input-number formControlName="amount_paid" [nzMin]="0" [nzStep]="100" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" placeholder="0.00"></nz-input-number>
+                    </nz-form-control>
+                  </nz-form-item>
+
+                  <!-- Check Out -->
+                  <nz-form-item *ngSwitchCase="'check_out'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('check_out')" class="text-[var(--theme-text-main)]/80 font-medium">Check-Out Date/Time</nz-form-label>
+                    <nz-form-control nzErrorTip="Please select check-out date/time">
+                      <nz-date-picker formControlName="check_out" [nzShowTime]="{ nzUse12Hours: true, nzFormat: 'hh:mm a' }" nzFormat="yyyy-MM-dd hh:mm a" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]"></nz-date-picker>
+                    </nz-form-control>
+                  </nz-form-item>
+
+
+                  <!-- Status -->
+                  <nz-form-item *ngSwitchCase="'status'" class="mb-0">
+                    <nz-form-label [nzRequired]="isColumnMandatory('status')" class="text-[var(--theme-text-main)]/80 font-medium">Booking Status</nz-form-label>
+                    <nz-form-control>
+                      <nz-radio-group formControlName="status" class="flex flex-wrap gap-4 mt-2 premium-status-radio">
+                        <label nz-radio nzValue="Confirmed" class="status-radio-confirmed">Confirmed (Reserved)</label>
+                        <label nz-radio nzValue="Checked In" class="status-radio-active">Checked In (Active)</label>
+                        <label nz-radio nzValue="Checked Out" class="status-radio-completed">Checked Out</label>
+                      </nz-radio-group>
+                    </nz-form-control>
+                  </nz-form-item>
+                </ng-container>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- ID Documents Upload -->
+          <div nz-row [nzGutter]="16" class="border-t border-[var(--theme-border)] my-3 pt-3">
+            <div nz-col nzSpan="24">
+              <nz-form-item class="mb-0">
+                <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium">ID Documents (Optional)</nz-form-label>
+                <nz-form-control>
+                  <nz-upload
+                    nzType="drag"
+                    [nzMultiple]="true"
+                    nzAccept="image/*,application/pdf"
+                    [nzBeforeUpload]="beforeUpload"
+                    [(nzFileList)]="fileList"
+                    class="dark-theme-upload">
+                    <p class="ant-upload-drag-icon">
+                      <span nz-icon nzType="camera" class="text-[var(--theme-primary)] text-3xl"></span>
+                    </p>
+                    <p class="ant-upload-text text-[var(--theme-text-main)] font-medium mt-2">Tap to Take Photo or Upload</p>
+                    <p class="ant-upload-hint text-[var(--theme-text-muted)] text-xs mt-1">Supports camera capture, images, and PDFs.</p>
+                  </nz-upload>
+                </nz-form-control>
+              </nz-form-item>
+            </div>
+          </div>
+        </form>
+      </ng-container>
+    </nz-modal>
+
+    <!-- SQL Copy Modal -->
+    <nz-modal [(nzVisible)]="isSqlModalVisible" 
+              nzTitle="Supabase SQL Setup" 
+              (nzOnCancel)="closeSqlModal()" 
+              [nzFooter]="sqlModalFooter"
+              [nzWidth]="650">
+      
+      <ng-template #sqlModalFooter>
+        <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider" (click)="closeSqlModal()">
+          Close
+        </button>
+      </ng-template>
+
+      <ng-container *nzModalContent>
+        <p class="text-xs text-[var(--theme-text-muted)] mb-4">
+          Copy and execute the following SQL code inside your Supabase SQL Editor to create the table and enable Row Level Security (RLS).
+        </p>
+        <pre class="bg-zinc-950 p-4 rounded-xl text-xs overflow-x-auto text-amber-400 border border-[var(--theme-border)] select-all font-mono" style="max-height: 350px;">{{ sqlCode }}</pre>
+      </ng-container>
+    </nz-modal>
+
+    <!-- Attachments Viewer Modal -->
+    <nz-modal [(nzVisible)]="isAttachmentModalVisible" 
+              nzTitle="View Attachments" 
+              (nzOnCancel)="isAttachmentModalVisible = false" 
+              [nzFooter]="null"
+              [nzWidth]="800">
+      <ng-container *nzModalContent>
+        <div class="flex flex-col gap-4">
+          <div *ngIf="isLoadingAttachments" class="flex justify-center p-8">
+            <span nz-icon nzType="loading" nzTheme="outline" class="text-4xl text-[var(--theme-primary)]"></span>
+          </div>
+          <div *ngIf="!isLoadingAttachments && attachmentUrls.length === 0" class="text-center text-[var(--theme-text-muted)] p-8">
+            No valid attachments found or links expired.
+          </div>
+          <div *ngIf="!isLoadingAttachments && attachmentUrls.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+            <div *ngFor="let url of attachmentUrls" class="border border-[var(--theme-border)] rounded-xl overflow-hidden bg-black/40 flex flex-col items-center justify-center p-4 relative group min-h-[200px]">
+               
+               <!-- File Preview (Image) -->
+               <img *ngIf="!url.includes('.pdf')" [src]="url" class="max-w-full max-h-[300px] object-contain rounded-lg transition-transform duration-300 group-hover:scale-105" alt="Attachment" (error)="onImageError($event)" />
+               
+               <!-- File Preview (PDF) -->
+               <div *ngIf="url.includes('.pdf')" class="flex flex-col items-center justify-center h-[200px] w-full bg-zinc-900/50 rounded-lg">
+                 <span nz-icon nzType="file-pdf" class="text-6xl text-rose-500 mb-3"></span>
+                 <span class="text-sm font-semibold text-[var(--theme-text-main)]">PDF Document</span>
+               </div>
+
+               <!-- Download / View Link Overlay -->
+               <a [href]="url" target="_blank" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col gap-2 items-center justify-center transition-opacity text-white hover:text-[var(--theme-primary)]">
+                 <span nz-icon nzType="eye" class="text-3xl mb-1"></span>
+                 <span class="text-xs font-bold uppercase tracking-widest bg-black/50 px-3 py-1 rounded-full border border-white/20">Click to Open</span>
+               </a>
+            </div>
+          </div>
+          
+
+        </div>
+      </ng-container>
+    </nz-modal>
+
+    <!-- Add New Guest Profile Modal -->
+    <nz-modal [(nzVisible)]="isGuestModalVisible" 
+              nzTitle="Create Guest Profile" 
+              (nzOnCancel)="handleGuestCancel()" 
+              [nzFooter]="guestModalFooter"
+              [nzWidth]="500">
+      
+      <ng-template #guestModalFooter>
+        <div class="flex justify-end gap-3 px-4 py-3">
+          <button nz-button nzType="default" class="bg-[var(--theme-border)]/5 border border-[var(--theme-border)] hover:bg-[var(--theme-border)]/20 text-[var(--theme-text-main)] rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider transition-all" (click)="handleGuestCancel()">
+            Cancel
+          </button>
+          <button nz-button class="bg-[var(--theme-primary)] hover:bg-[var(--theme-primary-dark)] text-black border-none rounded-xl h-10 px-5 text-xs font-semibold uppercase tracking-wider shadow-[0_0_15px_var(--theme-glow)] hover:shadow-[0_0_25px_var(--theme-glow-hover)] transition-all" (click)="handleGuestOk()" [nzLoading]="isGuestOkLoading">
+            Save & Auto-fill
+          </button>
+        </div>
+      </ng-template>
+
+      <ng-container *nzModalContent>
+        <div class="mb-5">
+          <nz-form-label class="text-[var(--theme-text-main)]/80 font-medium w-full">Search Existing Guest</nz-form-label>
+          <div class="relative">
+            <input nz-input [(ngModel)]="guestSearchQuery" (ngModelChange)="onGuestSearchChange($event)" placeholder="Type name, phone, or ID..." [nzAutocomplete]="guestAuto" autocomplete="off" class="w-full h-10 rounded-xl bg-[var(--theme-card-bg)] border border-[var(--theme-border)] text-[var(--theme-text-main)] pr-10 focus:border-[var(--theme-primary)] hover:border-[var(--theme-primary)] transition-all shadow-sm" />
+            <span nz-icon nzType="search" class="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--theme-text-muted)] pointer-events-none text-lg opacity-70"></span>
+          </div>
+          <nz-autocomplete #guestAuto nzBackfill>
+            <nz-auto-option *ngFor="let guest of guestSearchResults" [nzValue]="guest.name" (selectionChange)="onGuestSelected($event, guest)">
+              <div class="flex flex-col py-1">
+                <span class="font-semibold text-sm text-[var(--theme-text-main)]">{{ guest.name }}</span>
+                <span class="text-[11px] text-[var(--theme-text-muted)] flex items-center mt-0.5">
+                  <span nz-icon nzType="phone" class="mr-1 text-[var(--theme-primary)]/70"></span>{{ guest.phone_number }}
+                  <ng-container *ngIf="guest.address"><span class="mx-2 text-[var(--theme-border)]">|</span><span nz-icon nzType="home" class="mr-1 text-[var(--theme-primary)]/70"></span><span class="truncate max-w-[150px]">{{ guest.address }}</span></ng-container>
+                </span>
+              </div>
+            </nz-auto-option>
+          </nz-autocomplete>
+        </div>
+
+        <div class="relative flex items-center py-2 mb-4">
+          <div class="flex-grow border-t border-[var(--theme-border)]/50"></div>
+          <span class="flex-shrink-0 mx-4 text-[var(--theme-text-muted)] text-[10px] uppercase tracking-[0.15em] font-semibold">Or Add New Guest Details</span>
+          <div class="flex-grow border-t border-[var(--theme-border)]/50"></div>
+        </div>
+
+        <form nz-form nzLayout="vertical" [formGroup]="guestForm" class="p-2 space-y-4">
+          <nz-form-item class="mb-0">
+            <nz-form-label [nzRequired]="isColumnMandatory('guest_name')" class="text-[var(--theme-text-main)]/80 font-medium">Guest Full Name</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter guest name">
+              <input nz-input formControlName="name" placeholder="e.g. John Doe" [nzAutocomplete]="guestAuto" (input)="onGuestNameInput($event)" autocomplete="off" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+            </nz-form-control>
+          </nz-form-item>
+          
+          <nz-form-item class="mb-0">
+            <nz-form-label [nzRequired]="isColumnMandatory('phone_number')" class="text-[var(--theme-text-main)]/80 font-medium">Phone Number</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter a valid 10-digit number (e.g. +91 9876543210)">
+              <input nz-input formControlName="phone_number" placeholder="e.g. +91 9876543210" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item class="mb-0">
+            <nz-form-label [nzRequired]="isColumnMandatory('id_number')" class="text-[var(--theme-text-main)]/80 font-medium">ID Number / Document No</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter ID number">
+              <input nz-input formControlName="id_number" [placeholder]="isColumnMandatory('id_number') ? 'Enter ID document number' : 'Optional'" class="w-full h-10 rounded-xl bg-transparent text-[var(--theme-text-main)]" />
+            </nz-form-control>
+          </nz-form-item>
+
+          <nz-form-item class="mb-0">
+            <nz-form-label [nzRequired]="isColumnMandatory('address')" class="text-[var(--theme-text-main)]/80 font-medium">Full Address</nz-form-label>
+            <nz-form-control nzErrorTip="Please enter full address">
+              <textarea nz-input formControlName="address" rows="3" [placeholder]="isColumnMandatory('address') ? 'Enter full guest address' : 'Optional'" class="w-full rounded-xl bg-transparent text-[var(--theme-text-main)] p-3"></textarea>
+            </nz-form-control>
+          </nz-form-item>
+        </form>
+      </ng-container>
+    </nz-modal>
+  `,
+  styles: [`
+    /* Status Radio Button Custom Styling */
+    ::ng-deep .premium-status-radio .ant-radio-checked .ant-radio-inner { border-color: var(--theme-primary) !important; }
+    ::ng-deep .premium-status-radio .ant-radio-inner::after { background-color: var(--theme-primary) !important; }
+    ::ng-deep .premium-status-radio .ant-radio-wrapper:hover .ant-radio-inner { border-color: var(--theme-primary-dark) !important; }
+    
+    ::ng-deep .premium-status-radio .ant-radio-wrapper { color: var(--theme-text-main) !important; font-weight: 500; }
+    ::ng-deep .premium-status-radio .ant-radio-inner { background-color: transparent !important; border-color: var(--theme-border) !important; }
+
+    ::ng-deep .custom-dark-select.status-confirmed .ant-select-selector {
+      color: var(--theme-primary) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
+      background-color: rgba(212, 175, 55, 0.05) !important;
+    }
+    ::ng-deep .custom-dark-select.status-checked-in .ant-select-selector {
+      color: #34d399 !important;
+      border-color: rgba(52, 211, 153, 0.3) !important;
+      background-color: rgba(52, 211, 153, 0.05) !important;
+    }
+    ::ng-deep .custom-dark-select.status-checked-out .ant-select-selector {
+      color: #a1a1aa !important;
+      border-color: rgba(161, 161, 170, 0.3) !important;
+      background-color: rgba(161, 161, 170, 0.05) !important;
+    }
+    ::ng-deep .ant-popover-inner {
+      background-color: var(--theme-card) !important;
+      border: 1px solid var(--theme-border) !important;
+      border-radius: 12px !important;
+      box-shadow: 0 10px 25px -5px var(--theme-shadow-heavy) !important;
+    }
+    ::ng-deep .ant-popover-inner-content {
+      padding: 0 !important;
+      color: var(--theme-text-main) !important;
+    }
+    ::ng-deep .ant-popover-arrow-content {
+      background-color: var(--theme-card) !important;
+      border-color: var(--theme-border) !important;
+    }
+  `]
+})

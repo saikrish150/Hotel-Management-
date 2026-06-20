@@ -1,9 +1,11 @@
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { SupabaseService } from '../services/supabase.service';
 import { ThemeService, Theme } from '../services/theme.service';
+import { DateUtils } from '../../shared/utils/date.utils';
 import { NzLayoutModule } from 'ng-zorro-antd/layout';
 import { NzMenuModule } from 'ng-zorro-antd/menu';
 import { NzIconModule } from 'ng-zorro-antd/icon';
@@ -18,6 +20,7 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzDatePickerModule } from 'ng-zorro-antd/date-picker';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators, FormsModule } from '@angular/forms';
 import { NzMessageService } from 'ng-zorro-antd/message';
+import { ColumnConfig, DEFAULT_DAILY_ENTRY_BASE_COLUMNS, DEFAULT_DAILY_ENTRY_END_COLUMNS } from '../models/column-config.model';
 
 @Component({
   selector: 'app-layout',
@@ -49,8 +52,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   isDailyEntryModalVisible = false;
   isOkLoading = false;
   dailyEntryForm: FormGroup;
+  popupFields: ColumnConfig[] = [];
   theme$: any;
   activeTitle = 'Executive Analytics';
+  hotelName = 'Hotelytics';
+  activePageTitle = 'Executive Analytics';
 
   roomConfig: any = {};
   roomTypes: string[] = [];
@@ -66,6 +72,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
   isCheckoutAlertVisible = false;
   activeAlertBooking: any = null;
 
+  isPasswordModalVisible = false;
+  isPasswordLoading = false;
+  passwordForm: FormGroup;
+
   // Stay Extension Modal State
   isExtensionModalVisible = false;
   extensionBooking: any = null;
@@ -77,6 +87,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   isCheckoutConfirmVisible = false;
   checkoutConfirmBooking: any = null;
   confirmCheckoutDate: Date | null = null;
+  checkoutPaymentAmount: number | null = null;
   isSavingCheckout = false;
 
   constructor(
@@ -84,8 +95,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private themeService: ThemeService,
     private fb: FormBuilder,
     private message: NzMessageService,
-    private router: Router
+    private router: Router,
+    private titleService: Title
   ) {
+    this.passwordForm = this.fb.group({
+      newPassword: ['', [Validators.required, Validators.minLength(6)]]
+    });
     this.theme$ = this.themeService.currentTheme$;
     this.dailyEntryForm = this.fb.group({
       entry_date: [new Date(), [Validators.required]],
@@ -121,7 +136,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
         let totalLimit = 0;
         this.roomTypes.forEach(type => {
-          const limit = this.roomConfig[type] || 0;
+          const limit = this.getRoomLimit(type);
           totalLimit += limit;
 
           // Dynamically add a form control for this room type
@@ -132,7 +147,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
           // Listen to changes to compute overall rooms sold
           this.dailyEntryForm.get(type)?.valueChanges.subscribe((value) => {
-            const limitVal = this.roomConfig[type] || 0;
+            const limitVal = this.getRoomLimit(type);
             if (value > limitVal) {
               this.dailyEntryForm.get(type)?.setValue(limitVal);
             } else {
@@ -145,6 +160,48 @@ export class LayoutComponent implements OnInit, OnDestroy {
         this.dailyEntryForm.patchValue({
           total_rooms_available: this.totalRoomsLimit
         });
+
+        // Initialize default columns/popupFields
+        const defaultCols: ColumnConfig[] = [
+          ...DEFAULT_DAILY_ENTRY_BASE_COLUMNS
+        ];
+
+        this.roomTypes.forEach(type => {
+          defaultCols.push({
+            key: type,
+            label: type,
+            visible: true,
+            width: '120px',
+            align: 'center'
+          });
+        });
+
+        defaultCols.push(
+          ...DEFAULT_DAILY_ENTRY_END_COLUMNS
+        );
+
+        this.popupFields = [...defaultCols];
+
+        if (profile.column_config && profile.column_config.daily_entries) {
+          const config = profile.column_config.daily_entries;
+          if (Array.isArray(config)) {
+            this.applySavedPopupFields(config);
+          } else if (config.popup) {
+            this.applySavedPopupFields(config.popup);
+          }
+        } else {
+          const local = localStorage.getItem('daily_entries_column_config');
+          if (local) {
+            try {
+              const parsed = JSON.parse(local);
+              if (Array.isArray(parsed)) {
+                this.applySavedPopupFields(parsed);
+              } else if (parsed.popup) {
+                this.applySavedPopupFields(parsed.popup);
+              }
+            } catch (e) {}
+          }
+        }
 
         // Trigger pre-populate initially for the current default date (today)
         const initialDate = this.dailyEntryForm.get('entry_date')?.value || new Date();
@@ -177,21 +234,21 @@ export class LayoutComponent implements OnInit, OnDestroy {
       const hotelId = profile?.hotel_id;
 
       // Try database first
-      const client = this.supabaseService.getClient();
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
+      
+      const { data, error } = await this.supabaseService.getRoomBookings(hotelId);
 
-      const { data, error } = await client
-        .from('room_bookings')
-        .select('*');
+      const validStatuses = ['checked in', 'active', 'completed', 'checked out'];
 
       if (!error && data) {
         activeBookings = data.filter((b: any) => {
+          if (!b.status || !validStatuses.includes(b.status.toLowerCase())) return false;
+          if (!b.check_in) return false;
           const checkIn = new Date(b.check_in);
-          const checkOut = new Date(b.check_out);
-          return (checkIn <= endOfDay && checkOut >= startOfDay);
+          return (checkIn >= startOfDay && checkIn <= endOfDay);
         });
       } else {
         // Fallback local storage
@@ -200,9 +257,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
         if (raw) {
           const parsed = JSON.parse(raw);
           activeBookings = parsed.filter((b: any) => {
+            if (!b.status || !validStatuses.includes(b.status.toLowerCase())) return false;
+            if (!b.check_in) return false;
             const checkIn = new Date(b.check_in);
-            const checkOut = new Date(b.check_out);
-            return (checkIn <= endOfDay && checkOut >= startOfDay);
+            return (checkIn >= startOfDay && checkIn <= endOfDay);
           });
         }
       }
@@ -226,8 +284,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
         }
       });
 
-      // Total guests defaults to count of active bookings
-      patchValues.total_guests = activeBookings.length;
+      // Total guests defaults to sum of number_of_people
+      patchValues.total_guests = activeBookings.reduce((sum: number, b: any) => sum + Number(b.number_of_people || 1), 0);
 
       // Revenue: sum of amount_paid of bookings that check in on this day
       let revenue = 0;
@@ -247,6 +305,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
     } catch (e) {
       console.error('Failed to prepopulate daily entry from bookings:', e);
     }
+  }
+
+  getRoomLimit(type: string): number {
+    if (!this.roomConfig || !this.roomConfig[type]) return 0;
+    if (Array.isArray(this.roomConfig[type])) return this.roomConfig[type].length;
+    return Number(this.roomConfig[type]) || 0;
   }
 
   getLocalDateString(date: Date): string {
@@ -286,23 +350,28 @@ export class LayoutComponent implements OnInit, OnDestroy {
   updateTitle() {
     const url = this.router.url;
     const profile = this.supabaseService.currentProfile;
-    const hotelName = profile?.hotel_name || 'Room Bookings Ledger';
+    this.hotelName = profile?.hotel_name || 'Hotelytics';
 
     if (url.includes('/dashboard') || url.includes('/analytics')) {
-      this.activeTitle = 'Executive Analytics';
+      this.activePageTitle = 'Executive Analytics';
     } else if (url.includes('/daily-entries')) {
-      this.activeTitle = 'Daily Log Entries';
+      this.activePageTitle = 'Daily Log Entries';
     } else if (url.includes('/bookings')) {
-      this.activeTitle = hotelName;
+      this.activePageTitle = 'Room Bookings Ledger';
     } else if (url.includes('/expenses')) {
-      this.activeTitle = 'Monthly Expense Audit';
+      this.activePageTitle = 'Monthly Expense Audit';
     } else if (url.includes('/reports')) {
-      this.activeTitle = 'Financial Performance & Variance';
+      this.activePageTitle = 'Financial Performance & Variance';
     } else if (url.includes('/settings')) {
-      this.activeTitle = 'System Settings';
+      this.activePageTitle = 'System Settings';
     } else {
-      this.activeTitle = 'Hotelytics Console';
+      this.activePageTitle = 'Hotelytics Console';
     }
+    
+    this.activeTitle = this.hotelName;
+
+    // Dynamically update the browser tab title
+    this.titleService.setTitle(`${this.hotelName} | ${this.activePageTitle}`);
   }
 
   setTheme(theme: string) {
@@ -324,7 +393,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
       this.isOkLoading = true;
       try {
         const formData = this.dailyEntryForm.getRawValue();
-        const client = this.supabaseService.getClient();
         const user = this.supabaseService.currentUser;
         const profile = this.supabaseService.currentProfile;
 
@@ -333,8 +401,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         }
 
         const dateObj = formData.entry_date instanceof Date ? formData.entry_date : new Date(formData.entry_date);
-        const offset = dateObj.getTimezoneOffset();
-        const entryDateStr = new Date(dateObj.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+        const entryDateStr = DateUtils.toLocalDateString(dateObj);
 
         const vacantRooms = (formData.total_rooms_available || 0) - (formData.rooms_sold || 0);
 
@@ -351,8 +418,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
           dbRoomData[colName] = val;
         });
 
-        const { error } = await client.from('daily_entries').insert([
-          {
+        const { error } = await this.supabaseService.insertDailyEntry({
             hotel_id: profile.hotel_id,
             entry_date: entryDateStr,
             rooms_sold: formData.rooms_sold,
@@ -367,10 +433,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
             pending_payments: 0,
             restaurant_revenue: 0,
             other_service_revenue: 0,
-            notes: formData.notes,
+            notes: formData.notes || '',
             created_by: user?.id
-          }
-        ]);
+          });
 
         if (error) {
           if (error.code === '23505') {
@@ -401,7 +466,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
         this.isOkLoading = false;
       }
     } else {
-      Object.values(this.dailyEntryForm.controls).forEach(control => {
+      Object.values(this.dailyEntryForm.controls).forEach((control: any) => {
         if (control.invalid) {
           control.markAsDirty();
           control.updateValueAndValidity({ onlySelf: true });
@@ -416,6 +481,60 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   async logout() {
     await this.supabaseService.signOut();
+  }
+
+  isColumnMandatory(key: string): boolean {
+    const col = this.popupFields?.find(c => c.key === key);
+    return col ? col.mandatory === true : false;
+  }
+
+  applySavedPopupFields(savedList: any[]): void {
+    if (!Array.isArray(savedList)) return;
+    const newFields: ColumnConfig[] = [];
+    const fieldMap = new Map<string, ColumnConfig>();
+    this.popupFields.forEach(f => fieldMap.set(f.key, f));
+    
+    savedList.forEach((s: any) => {
+      const existing = fieldMap.get(s.key);
+      if (existing) {
+        newFields.push({
+          ...existing,
+          visible: s.visible,
+          mandatory: s.mandatory
+        });
+        fieldMap.delete(s.key);
+      }
+    });
+    
+    fieldMap.forEach(f => newFields.push(f));
+    this.popupFields = newFields;
+    this.applyMandatoryChecks();
+  }
+
+  applyMandatoryChecks(): void {
+    if (!this.popupFields || this.popupFields.length === 0) return;
+
+    this.popupFields.forEach(col => {
+      const isMandatory = col.mandatory === true;
+      const control = this.dailyEntryForm?.get(col.key);
+      if (control) {
+        if (isMandatory) {
+          if (col.key === 'rooms_sold' || col.key === 'total_rooms_available' || col.key === 'total_guests') {
+            control.setValidators([Validators.required, Validators.min(0)]);
+          } else if (col.key === 'total_revenue') {
+            control.setValidators([Validators.required, Validators.min(0)]);
+          } else {
+            control.setValidators([Validators.required]);
+          }
+        } else {
+          control.clearValidators();
+          if (['rooms_sold', 'total_rooms_available', 'total_guests', 'total_revenue'].includes(col.key)) {
+            control.setValidators([Validators.min(0)]);
+          }
+        }
+        control.updateValueAndValidity();
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -479,11 +598,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   async loadBookings(): Promise<void> {
     try {
-      const client = this.supabaseService.getClient();
-      const { data, error } = await client
-        .from('room_bookings')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const profile = this.supabaseService.currentProfile;
+      const hotelId = profile?.hotel_id;
+      const { data, error } = await this.supabaseService.getRoomBookings(hotelId);
 
       if (error) {
         if (error.message.includes('relation') || error.message.includes('does not exist') || error.message.includes('schema cache')) {
@@ -585,8 +702,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
     let allBookings: any[] = [];
     if (this.isDatabaseLinked) {
       try {
-        const client = this.supabaseService.getClient();
-        const { data } = await client.from('room_bookings').select('*');
+        const { data } = await this.supabaseService.getRoomBookings(hotelId !== 'default' ? hotelId : undefined);
         if (data) allBookings = data;
       } catch (e) {
         console.error('Failed to get all bookings for sync:', e);
@@ -605,9 +721,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
       endOfDay.setHours(23, 59, 59, 999);
 
       const activeBookings = allBookings.filter((b: any) => {
+        const validStatuses = ['checked in', 'active', 'completed', 'checked out'];
+        if (!b.status || !validStatuses.includes(b.status.toLowerCase())) return false;
+        
+        if (!b.check_in) return false;
         const checkIn = new Date(b.check_in);
-        const checkOut = new Date(b.check_out);
-        return (checkIn <= endOfDay && checkOut >= startOfDay);
+        // Only count bookings that specifically checked-in on this exact date
+        return (checkIn >= startOfDay && checkIn <= endOfDay);
       });
 
       let standard_ac = 0;
@@ -623,8 +743,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
         else if (col === 'suite_rooms_sold') suite++;
       });
 
-      const rooms_sold = standard_ac + standard_non_ac + deluxe + suite;
-      const total_guests = activeBookings.length;
+      const rooms_sold = activeBookings.length;
+      const total_guests = activeBookings.reduce((sum: number, b: any) => sum + Number(b.number_of_people || 1), 0);
 
       let total_revenue = 0;
       activeBookings.forEach((b: any) => {
@@ -636,53 +756,42 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
       if (this.isDatabaseLinked) {
         try {
-          const client = this.supabaseService.getClient();
-          const { data: existing, error: findError } = await client
-            .from('daily_entries')
-            .select('id')
-            .eq('hotel_id', hotelId)
-            .eq('entry_date', targetDateStr)
-            .maybeSingle();
+          const { data: existing, error: findError } = await this.supabaseService.getDailyEntryByDate(hotelId, targetDateStr);
 
           if (!findError) {
             if (existing) {
-              await client
-                .from('daily_entries')
-                .update({
-                  rooms_sold,
-                  vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
-                  total_guests,
-                  total_revenue,
-                  standard_ac_rooms_sold: standard_ac,
-                  standard_non_ac_rooms_sold: standard_non_ac,
-                  deluxe_rooms_sold: deluxe,
-                  suite_rooms_sold: suite
-                })
-                .eq('id', existing.id);
+              await this.supabaseService.updateDailyEntry(existing.id, {
+                rooms_sold,
+                vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
+                total_guests,
+                total_revenue,
+                standard_ac_rooms_sold: standard_ac,
+                standard_non_ac_rooms_sold: standard_non_ac,
+                deluxe_rooms_sold: deluxe,
+                suite_rooms_sold: suite
+              });
             } else {
-              await client
-                .from('daily_entries')
-                .insert([{
-                  hotel_id: hotelId,
-                  entry_date: targetDateStr,
-                  rooms_sold,
-                  total_rooms_available: totalRoomsLimit,
-                  vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
-                  total_guests,
-                  total_revenue,
-                  standard_ac_rooms_sold: standard_ac,
-                  standard_non_ac_rooms_sold: standard_non_ac,
-                  deluxe_rooms_sold: deluxe,
-                  suite_rooms_sold: suite,
-                  cash_payments: 0,
-                  upi_payments: 0,
-                  card_payments: 0,
-                  pending_payments: 0,
-                  restaurant_revenue: 0,
-                  other_service_revenue: 0,
-                  notes: 'Generated automatically from Room Bookings',
-                  created_by: userId
-                }]);
+              await this.supabaseService.insertDailyEntry({
+                hotel_id: hotelId,
+                entry_date: targetDateStr,
+                rooms_sold,
+                total_rooms_available: totalRoomsLimit,
+                vacant_rooms: Math.max(0, totalRoomsLimit - rooms_sold),
+                total_guests,
+                total_revenue,
+                standard_ac_rooms_sold: standard_ac,
+                standard_non_ac_rooms_sold: standard_non_ac,
+                deluxe_rooms_sold: deluxe,
+                suite_rooms_sold: suite,
+                cash_payments: 0,
+                upi_payments: 0,
+                card_payments: 0,
+                pending_payments: 0,
+                restaurant_revenue: 0,
+                other_service_revenue: 0,
+                notes: 'Generated automatically from Room Bookings',
+                created_by: userId
+              });
             }
           }
         } catch (e) {
@@ -797,20 +906,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     try {
       const start = new Date(this.extensionBooking.check_in);
       const end = new Date(this.newCheckoutDate);
-      const diffTime = end.getTime() - start.getTime();
-      const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      const diffDays = DateUtils.getDaysBetween(start, end);
       
       const affectedDates = this.getStayDates(this.extensionBooking.check_in, this.newCheckoutDate);
 
       if (this.isDatabaseLinked) {
-        const client = this.supabaseService.getClient();
-        const { error } = await client
-          .from('room_bookings')
-          .update({
-            check_out: end.toISOString(),
-            number_of_days: diffDays
-          })
-          .eq('id', this.extensionBooking.id);
+        const { error } = await this.supabaseService.updateRoomBooking(this.extensionBooking.id, {
+          check_out: end.toISOString(),
+          number_of_days: diffDays
+        });
 
         if (error) throw error;
       } else {
@@ -850,7 +954,14 @@ export class LayoutComponent implements OnInit, OnDestroy {
   openCheckoutConfirmModal(booking: any): void {
     this.checkoutConfirmBooking = booking;
     this.confirmCheckoutDate = new Date();
+    this.checkoutPaymentAmount = this.getCheckoutPendingBalance(booking); // Pre-fill with remaining balance
     this.isCheckoutConfirmVisible = true;
+  }
+
+  getCheckoutPendingBalance(booking: any = this.checkoutConfirmBooking): number {
+    if (!booking) return 0;
+    // 'total_amount' is now being used to store the 'Amount Due'
+    return Number(booking.total_amount) || 0;
   }
 
   async confirmCheckout(): Promise<void> {
@@ -863,16 +974,17 @@ export class LayoutComponent implements OnInit, OnDestroy {
       const affectedDates = this.getStayDates(booking.check_in, checkoutVal);
 
       if (this.isDatabaseLinked) {
-        const client = this.supabaseService.getClient();
         const updatePayload: any = { 
           status: 'Checked Out',
           actual_checkout: checkoutVal.toISOString()
         };
-
-        const { error } = await client
-          .from('room_bookings')
-          .update(updatePayload)
-          .eq('id', booking.id);
+        
+        if (this.checkoutPaymentAmount) {
+          const currentDue = Number(booking.total_amount) || 0;
+          updatePayload.total_amount = Math.max(0, currentDue - this.checkoutPaymentAmount);
+        }
+        
+        const { error } = await this.supabaseService.updateRoomBooking(booking.id, updatePayload);
 
         if (error) throw error;
         this.message.success('Guest checked out successfully in database!');
@@ -885,7 +997,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
           let localB = JSON.parse(raw);
           localB = localB.map((b: any) => {
             if (b.id === booking.id) {
-              return { ...b, status: 'Checked Out', actual_checkout: checkoutVal };
+              const updatedB = { ...b, status: 'Checked Out', actual_checkout: checkoutVal };
+              if (this.checkoutPaymentAmount) {
+                const currentDue = Number(b.total_amount) || 0;
+                updatedB.total_amount = Math.max(0, currentDue - this.checkoutPaymentAmount);
+              }
+              return updatedB;
             }
             return b;
           });
@@ -904,6 +1021,43 @@ export class LayoutComponent implements OnInit, OnDestroy {
       this.message.error(e.message || 'Failed to checkout guest');
     } finally {
       this.isSavingCheckout = false;
+    }
+  }
+
+  showPasswordModal(): void {
+    this.isPasswordModalVisible = true;
+    this.passwordForm.reset();
+  }
+
+  handlePasswordCancel(): void {
+    this.isPasswordModalVisible = false;
+    this.passwordForm.reset();
+  }
+
+  async handlePasswordSave(): Promise<void> {
+    if (this.passwordForm.invalid) {
+      Object.values(this.passwordForm.controls).forEach(control => {
+        if (control.invalid) {
+          control.markAsDirty();
+          control.updateValueAndValidity({ onlySelf: true });
+        }
+      });
+      return;
+    }
+
+    this.isPasswordLoading = true;
+    try {
+      const newPassword = this.passwordForm.get('newPassword')?.value;
+      const { error } = await this.supabaseService.updatePassword(newPassword);
+      if (error) throw error;
+      
+      this.message.success('Password updated successfully.');
+      this.isPasswordModalVisible = false;
+    } catch (e: any) {
+      console.error(e);
+      this.message.error(e.message || 'Failed to update password.');
+    } finally {
+      this.isPasswordLoading = false;
     }
   }
 }
